@@ -43,7 +43,7 @@ export const getAll = query({
         if (!identity) {
             throw new Error("User not authenticated");
         }
-        let query:any = ctx.db.query("studyGroups");
+        let query: any = ctx.db.query("studyGroups");
 
         if (args.subject) {
             query = query.withIndex("by_subject", (q) => q.eq("subject", args.subject));
@@ -287,30 +287,30 @@ export const getGroupSessions = query({
 export const getGroupMembers = query({
     args: { groupId: v.id("studyGroups") },
     handler: async (ctx, args) => {
-      // Get the study group
-      const group = await ctx.db.get(args.groupId);
-      if (!group) {
-        throw new Error("Study group not found");
-      }
-  
-      // Check if your schema has a users table
-      // If there's no users table in your schema, you'll need to add one
-      // For now, we'll just return the member IDs
-      return group.members;
-      
-      /* If you have a users table, you would do something like:
-      const memberPromises = group.members.map(async (memberId) => {
-        const user = await ctx.db
-          .query("users")  // Assuming you have a users table
-          .withIndex("by_id", (q) => q.eq("_id", memberId))
-          .first();
-        return user;
-      });
-  
-      return await Promise.all(memberPromises);
-      */
+        // Get the study group
+        const group = await ctx.db.get(args.groupId);
+        if (!group) {
+            throw new Error("Study group not found");
+        }
+
+        // Check if your schema has a users table
+        // If there's no users table in your schema, you'll need to add one
+        // For now, we'll just return the member IDs
+        return group.members;
+
+        /* If you have a users table, you would do something like:
+        const memberPromises = group.members.map(async (memberId) => {
+          const user = await ctx.db
+            .query("users")  // Assuming you have a users table
+            .withIndex("by_id", (q) => q.eq("_id", memberId))
+            .first();
+          return user;
+        });
+    
+        return await Promise.all(memberPromises);
+        */
     },
-  });
+});
 
 // Get resources for a group
 export const getGroupResources = query({
