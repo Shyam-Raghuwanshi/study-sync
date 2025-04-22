@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Calendar, 
@@ -11,6 +10,9 @@ import {
   Unlock,
   User
 } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { 
   Tabs, 
@@ -26,64 +28,37 @@ import SessionCard from '@/components/dashboard/SessionCard';
 
 const GroupDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Mock data for a study group (would come from API in real implementation)
-  const group = {
-    id: id || '1',
-    name: 'Physics 101',
-    description: 'Study group for introductory physics covering mechanics, waves, and thermodynamics.',
-    subject: 'Physics',
-    memberCount: 12,
-    createdBy: 'Alex Johnson',
-    isPublic: true,
-    createdAt: 'March 15, 2025',
-    lastActive: '2 hours ago',
-    sessions: [
-      {
-        id: '1',
-        name: 'Quantum Mechanics Review',
-        groupName: 'Physics 101',
-        subject: 'Physics',
-        date: 'Today',
-        time: '3:00 PM - 5:00 PM',
-        status: 'upcoming' as const,
-        participantCount: 5
-      },
-      {
-        id: '2',
-        name: 'Forces & Motion Practice',
-        groupName: 'Physics 101',
-        subject: 'Physics',
-        date: 'Apr 26',
-        time: '4:00 PM - 6:00 PM',
-        status: 'upcoming' as const,
-        participantCount: 4
-      },
-      {
-        id: '3',
-        name: 'Thermodynamics Deep Dive',
-        groupName: 'Physics 101',
-        subject: 'Physics',
-        date: 'Apr 22',
-        time: '2:00 PM - 4:00 PM',
-        status: 'completed' as const,
-        participantCount: 6
-      }
-    ],
-    members: [
-      { id: '1', name: 'Alex Johnson', role: 'Admin', avatar: '/placeholder.svg' },
-      { id: '2', name: 'Maria Rodriguez', role: 'Member', avatar: '/placeholder.svg' },
-      { id: '3', name: 'David Kim', role: 'Member', avatar: '/placeholder.svg' },
-      { id: '4', name: 'Sarah Chen', role: 'Member', avatar: '/placeholder.svg' },
-      { id: '5', name: 'James Wilson', role: 'Member', avatar: '/placeholder.svg' }
-    ],
-    resources: [
-      { id: '1', name: 'Physics Textbook (PDF)', type: 'PDF', uploadedBy: 'Alex', date: 'Mar 20' },
-      { id: '2', name: 'Wave Mechanics Notes', type: 'Document', uploadedBy: 'Maria', date: 'Apr 10' },
-      { id: '3', name: 'Kinematics Practice Problems', type: 'Document', uploadedBy: 'David', date: 'Apr 15' }
-    ]
-  };
+  // Fetch all the data we need for the group
+  const group = useQuery(api.studyGroups.getById, { id: id as any });
+  const sessions = useQuery(api.studyGroups.getGroupSessions, { groupId: id as any });
+  const members = useQuery(api.studyGroups.getGroupMembers, { groupId: id as any });
+  const resources = useQuery(api.studyGroups.getGroupResources, { groupId: id as any });
+  const recentActivity = useQuery(api.studyGroups.getRecentActivity, { 
+    groupId: id as any,
+    limit: 5 
+  });
+
+  // Show loading state while data is being fetched
+  if (!group || !sessions || !members || !resources || !recentActivity) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col space-y-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96 mt-2" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -130,7 +105,7 @@ const GroupDetail = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Members</p>
-                  <p className="font-medium">{group.memberCount} members</p>
+                  <p className="font-medium">{members.length} members</p>
                 </div>
               </div>
               <div className="flex items-center">
@@ -148,7 +123,7 @@ const GroupDetail = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created on</p>
-                  <p className="font-medium">{group.createdAt}</p>
+                  <p className="font-medium">{new Date(group.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
@@ -173,29 +148,24 @@ const GroupDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {group.sessions
+                      {sessions
                         .filter(session => session.status !== 'completed')
                         .slice(0, 2)
                         .map(session => (
                           <SessionCard
-                            key={session.id}
-                            id={session.id}
+                            key={session._id}
+                            id={session._id}
                             name={session.name}
-                            groupName={session.groupName}
-                            subject={session.subject}
-                            date={session.date}
-                            time={session.time}
+                            groupName={group.name}
+                            subject={session.topic}
+                            date={new Date(session.scheduledTime).toLocaleDateString()}
+                            time={new Date(session.scheduledTime).toLocaleTimeString()}
                             status={session.status}
-                            participantCount={session.participantCount}
+                            participantCount={session.participants?.length || 0}
                           />
                         ))
                       }
                     </div>
-                    {group.sessions.filter(session => session.status !== 'completed').length > 2 && (
-                      <Button variant="ghost" className="mt-3 w-full">
-                        View All Sessions
-                      </Button>
-                    )}
                   </CardContent>
                 </Card>
 
@@ -205,44 +175,22 @@ const GroupDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex items-start space-x-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src="/placeholder.svg" alt="User" />
-                          <AvatarFallback>AJ</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">
-                            <span className="text-primary">Alex Johnson</span> scheduled a new session
-                          </p>
-                          <p className="text-sm text-gray-500">Quantum Mechanics Review - Today at 3:00 PM</p>
-                          <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
+                      {recentActivity.sessions.slice(0, 3).map(activity => (
+                        <div key={activity._id} className="flex items-start space-x-4">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback>{activity.createdBy.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">
+                              New session scheduled
+                            </p>
+                            <p className="text-sm text-gray-500">{activity.name}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {new Date(activity._creationTime).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-start space-x-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src="/placeholder.svg" alt="User" />
-                          <AvatarFallback>MR</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">
-                            <span className="text-primary">Maria Rodriguez</span> uploaded a resource
-                          </p>
-                          <p className="text-sm text-gray-500">Wave Mechanics Notes</p>
-                          <p className="text-xs text-gray-400 mt-1">1 day ago</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start space-x-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src="/placeholder.svg" alt="User" />
-                          <AvatarFallback>DK</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">
-                            <span className="text-primary">David Kim</span> joined the group
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">2 days ago</p>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -255,22 +203,21 @@ const GroupDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {group.members.slice(0, 5).map(member => (
-                        <div key={member.id} className="flex items-center justify-between">
+                      {members.slice(0, 5).map(member => (
+                        <div key={member._id} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={member.avatar} alt={member.name} />
-                              <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                              <AvatarFallback>{member?.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="text-sm font-medium">{member.name}</p>
-                              <p className="text-xs text-gray-500">{member.role}</p>
+                              <p className="text-xs text-gray-500">{member.role || 'Member'}</p>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                    {group.members.length > 5 && (
+                    {members.length > 5 && (
                       <Button variant="ghost" className="mt-3 w-full text-xs" size="sm">
                         View All Members
                       </Button>
@@ -284,8 +231,8 @@ const GroupDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {group.resources.map(resource => (
-                        <div key={resource.id} className="flex items-center justify-between">
+                      {resources.slice(0, 5).map(resource => (
+                        <div key={resource._id} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="bg-gray-100 p-2 rounded">
                               <BookOpen className="h-4 w-4 text-gray-500" />
@@ -293,7 +240,7 @@ const GroupDetail = () => {
                             <div>
                               <p className="text-sm font-medium">{resource.name}</p>
                               <p className="text-xs text-gray-500">
-                                Added by {resource.uploadedBy} on {resource.date}
+                                Added by {resource.uploadedBy} on {new Date(resource._creationTime).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -322,7 +269,7 @@ const GroupDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {group.sessions.map(session => (
+                  {sessions.map(session => (
                     <SessionCard
                       key={session.id}
                       id={session.id}
@@ -353,11 +300,11 @@ const GroupDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {group.members.map(member => (
+                  {members.map((member:any) => (
                     <div key={member.id} className="flex items-center space-x-4 p-4 border rounded-md">
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={member.avatar} alt={member.name} />
-                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{member?.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <p className="font-medium">{member.name}</p>
@@ -384,7 +331,7 @@ const GroupDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {group.resources.map(resource => (
+                  {resources.map(resource => (
                     <div key={resource.id} className="flex items-center justify-between p-4 border rounded-md">
                       <div className="flex items-center space-x-4">
                         <div className="bg-primary/10 p-3 rounded">
