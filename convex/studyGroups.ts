@@ -99,22 +99,27 @@ export const getById = query({
 export const joinGroup = mutation({
     args: {
         groupId: v.id("studyGroups"),
-        userId: v.string(),
     },
     handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("User not authenticated");
+        }
+        const userId = identity.subject;
+        console.log(userId, "User ID");
         const group = await ctx.db.get(args.groupId);
         if (!group) {
             throw new Error("Study group not found");
         }
 
         // Check if user is already a member
-        if (group.members.includes(args.userId)) {
+        if (group.members.includes(userId)) {
             return args.groupId;
         }
 
         // Add the user to the members array
         await ctx.db.patch(args.groupId, {
-            members: [...group.members, args.userId],
+            members: [...group.members, userId],
             lastActive: Date.now(),
         });
 

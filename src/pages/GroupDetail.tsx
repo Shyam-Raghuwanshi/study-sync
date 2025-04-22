@@ -8,9 +8,10 @@ import {
   Plus,
   Lock,
   Unlock,
-  User
+  User,
+  JoystickIcon
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
@@ -25,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import SessionCard from '@/components/dashboard/SessionCard';
+import { toast } from 'sonner';
 
 const GroupDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +37,8 @@ const GroupDetail = () => {
   // Fetch all groups if no id is provided
   const allGroups = useQuery(api.studyGroups.getAll, {});
 
+
+
   // Only fetch specific group data if id is present
   const group = id ? useQuery(api.studyGroups.getById, { id: id as any }) : null;
   const sessions = id ? useQuery(api.studyGroups.getGroupSessions, { groupId: id as any }) : null;
@@ -44,6 +48,8 @@ const GroupDetail = () => {
     groupId: id as any,
     limit: 5
   }) : null;
+  console.log({members})
+  const joinGroup = useMutation(api.studyGroups.joinGroup);
 
   // Show loading state while data is being fetched
   if ((id && (!group || !sessions || !members || !resources || !recentActivity)) || (!id && !allGroups)) {
@@ -63,7 +69,19 @@ const GroupDetail = () => {
       </DashboardLayout>
     );
   }
-
+  const handleJoinGroup = async () => {
+    if (!id) return;
+    try {
+      const promise = joinGroup({ groupId: id as any });
+      toast.promise(promise, {
+        loading: 'Joining group...',
+        success: 'Successfully joined the group!',
+        error: `Error joining group`,
+      });
+    } catch (error) {
+      console.error('Error joining group:', error);
+    }
+  }
   // If no id is provided, show all groups
   if (!id) {
     return (
@@ -142,6 +160,10 @@ const GroupDetail = () => {
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Schedule Session
+          </Button>
+          <Button onClick={handleJoinGroup}>
+            <JoystickIcon className="mr-2 h-4 w-4" />
+            Join Group
           </Button>
         </div>
 
