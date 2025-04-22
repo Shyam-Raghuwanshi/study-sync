@@ -32,30 +32,34 @@ export const create = mutation({
 });
 
 // Get all study groups (with optional filtering)
-// export const getAll = query({
-//     args: {
-//         subject: v.optional(v.string()),
-//         userId: v.optional(v.string()),
-//         onlyPublic: v.optional(v.boolean()),
-//     },
-//     handler: async (ctx, args) => {
-//         let query = ctx.db.query("studyGroups");
+export const getAll = query({
+    args: {
+        subject: v.optional(v.string()),
+        userId: v.optional(v.string()),
+        onlyPublic: v.optional(v.boolean()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("User not authenticated");
+        }
+        let query:any = ctx.db.query("studyGroups");
 
-//         if (args.subject) {
-//             query = query.withIndex("by_subject", (q) => q.eq("subject", args.subject));
-//         }
+        if (args.subject) {
+            query = query.withIndex("by_subject", (q) => q.eq("subject", args.subject));
+        }
 
-//         if (args.userId) {
-//             query = query.withIndex("by_member", (q) => q.eq("members", args.userId));
-//         }
+        if (args.userId) {
+            query = query.withIndex("by_member", (q) => q.eq("members", args.userId));
+        }
 
-//         if (args.onlyPublic) {
-//             query = query.filter((q) => q.eq(q.field("isPublic"), true));
-//         }
+        if (args.onlyPublic) {
+            query = query.filter((q) => q.eq(q.field("isPublic"), true));
+        }
 
-//         return await query.collect();
-//     },
-// });
+        return await query.collect();
+    },
+});
 
 // // Get a specific study group by ID
 // export const getById = query({
