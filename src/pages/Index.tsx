@@ -4,7 +4,10 @@ import { Sparkle, BookOpen, Users, ArrowRight, CheckCircle2 } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SignInButton, SignUpButton, UserButton, UserProfile } from '@clerk/clerk-react';
+import { useConvexAuth } from 'convex/react';
+import { Loader } from '@/components/ui/loader';
 const Index = () => {
+  const { isAuthenticated, isLoading } = useConvexAuth();
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -14,15 +17,18 @@ const Index = () => {
             <span className="text-primary font-bold text-xl">StudySync</span>
           </div>
           <div className="flex items-center space-x-4">
-            <>
+            {isLoading && <Loader />}
+            {!isAuthenticated && !isLoading && <>
               <Button variant="ghost" asChild>
                 <SignInButton />
               </Button>
               <Button asChild>
                 <SignUpButton />
               </Button>
-            </>
-            <UserButton />
+            </>}
+
+            {isAuthenticated && <UserButton />}
+
           </div>
         </div>
       </header >
