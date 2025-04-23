@@ -1,0 +1,356 @@
+
+
+// convex/whiteboards.ts
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+// Create a new whiteboard
+export const create = mutation({
+  args: {
+    name: v.string(),
+    sessionId: v.id("studySessions"),
+    userId: v.string(), // The user creating the whiteboard
+  },
+  handler: async (ctx, args) => {
+    // Ensure the session exists
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) {
+      throw new Error("Study session not found");
+    }
+    
+    // Ensure user is a participant in the session
+    if (!session.participants.includes(args.userId)) {
+      throw new Error("User is not a participant in this session");
+    }
+    
+    const whiteboardId = await ctx.db.insert("whiteboards", {
+      name: args.name,
+      sessionId: args.sessionId,
+      elements: [],
+      snapshots: [],
+      lastUpdated: Date.now(),
+    });
+    
+    return whiteboardId;
+  },
+});
+
+// Get whiteboards for a session
+export const getBySession = query({
+  args: {
+    sessionId: v.id("studySessions"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("whiteboards")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+  },
+});
+
+// Get a specific whiteboard by ID
+export const getById = query({
+  args: { id: v.id("whiteboards") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+// Update a whiteboard with new elements
+export const updateElements = mutation({
+  args: {
+    id: v.id("whiteboards"),
+    elements: v.array(v.any()),
+    userId: v.string(), // The user making the update
+    createSnapshot: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const whiteboard = await ctx.db.get(args.id);
+    if (!whiteboard) {
+      throw new Error("Whiteboard not found");
+    }
+    
+    // Check if user is a participant in the session
+    const session = await ctx.db.get(whiteboard.sessionId);
+    if (!session || !session.participants.includes(args.userId)) {
+      throw new Error("User is not authorized to update this whiteboard");
+    }
+    
+    const updates: any = {
+      elements: args.elements,
+      lastUpdated: Date.now(),
+    };
+    
+    // Create a snapshot if requested
+    if (args.createSnapshot) {
+      updates.snapshots = [
+        ...whiteboard.snapshots,
+        {
+          timestamp: Date.now(),
+          elements: whiteboard.elements,
+          createdBy: args.userId,
+        },
+      ];
+    }
+    
+    await ctx.db.patch(args.id, updates);
+    
+    return args.id;
+  },
+});
+
+// Delete a whiteboard
+export const deleteWhiteboard = mutation({
+  args: {
+    id: v.id("whiteboards"),
+    userId: v.string(), // The user deleting the whiteboard
+  },
+  handler: async (ctx, args) => {
+    const whiteboard = await ctx.db.get(args.id);
+    if (!whiteboard) {
+      throw new Error("Whiteboard not found");
+    }
+    
+    // Check if user is a participant in the session
+    const session = await ctx.db.get(whiteboard.sessionId);
+    if (!session || !session.participants.includes(args.userId)) {
+      throw new Error("User is not authorized to delete this whiteboard");
+    }
+    
+    await ctx.db.delete(args.id);
+    return true;
+  },
+});
+
+// convex/problems.ts
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+// Create a new problem
+export const create = mutation({
+  args: {
+    sessionId: v.id("studySessions"),
+    content: v.string(),
+    solution: v.string(),
+    difficulty: v.number(),
+    tags: v.array(v.string()),
+    generatedBy: v.union(v.string(), v.literal("AI")),
+  },
+  handler: async (ctx, args) => {
+    // Ensure the session exists
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) {
+      throw new Error("Study session not found");
+    }
+    
+    // If not AI-generated, ensure the user is a participant
+    if (args.generatedBy !== "AI") {
+      if (!session.participants.includes(args.generatedBy)) {
+        throw new Error("User is not a participant in this session");
+      }
+    }
+    
+    const problemId = await ctx.db.insert("problems", {
+      sessionId: args.sessionId,
+      content: args.content,
+      solution: args.solution,
+      difficulty: args.difficulty,
+      tags: args.tags,
+      generatedBy: args.generatedBy,
+      attempts: {},
+    });
+    
+    return problemId;
+  },
+});
+
+// Get problems for a session
+export const getBySession = query({
+  args: {
+    sessionId: v.id("studySessions"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("problems")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+  },
+});
+
+// Get a specific problem by ID
+export const getById = query({
+  args: { id: v.id("problems") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+// Record a problem attempt
+export const recordAttempt = mutation({
+  args: {
+    id: v.id("problems"),
+    userId: v.string(),
+    solved: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const problem = await ctx.db.get(args.id);
+    if (!problem) {
+      throw new Error("Problem not found");
+    }
+    
+    // Get current attempts for the user or initialize
+    const userAttempts = problem.attempts[args.userId] || {
+      attempts: 0,
+      solved: false,
+      lastAttempt: 0,
+    };
+    
+    // Update the attempts
+    const updatedAttempts = {
+      ...userAttempts,
+      attempts: userAttempts.attempts + 1,
+      solved: args.solved || userAttempts.solved, // Mark as solved if this attempt was successful
+      lastAttempt: Date.now(),
+    };
+    
+    // Update the problem record
+    await ctx.db.patch(args.id, {
+      attempts: {
+        ...problem.attempts,
+        [args.userId]: updatedAttempts,
+      },
+    });
+    
+    // If solved, update the user's progress
+    if (args.solved && !userAttempts.solved) {
+      // Find the related session and group
+      const session = await ctx.db.get(problem.sessionId);
+      if (session) {
+        // Find the user's progress record for this group
+        const progressRecords = await ctx.db
+          .query("progress")
+          .withIndex("by_user", (q) => q.eq("userId", args.userId))
+          .filter((q) => q.eq(q.field("groupId"), session.groupId))
+          .collect();
+        
+        if (progressRecords.length > 0) {
+          const progress = progressRecords[0];
+          await ctx.db.patch(progress._id, {
+            problemsSolved: progress.problemsSolved + 1,
+            lastUpdated: Date.now(),
+          });
+        }
+      }
+    }
+    
+    return updatedAttempts;
+  },
+});
+
+// Delete a problem
+export const deleteProblem = mutation({
+  args: {
+    id: v.id("problems"),
+    userId: v.string(), // The user deleting the problem
+  },
+  handler: async (ctx, args) => {
+    const problem = await ctx.db.get(args.id);
+    if (!problem) {
+      throw new Error("Problem not found");
+    }
+    
+    // Check if user is the creator (if not AI-generated)
+    if (problem.generatedBy !== "AI" && problem.generatedBy !== args.userId) {
+      // If not creator, check if user is a participant in the session
+      const session = await ctx.db.get(problem.sessionId);
+      if (!session || !session.participants.includes(args.userId)) {
+        throw new Error("Not authorized to delete this problem");
+      }
+    }
+    
+    await ctx.db.delete(args.id);
+    return true;
+  },
+});
+
+// convex/progress.ts
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+// Initialize or update a user's progress
+export const upsertProgress = mutation({
+  args: {
+    userId: v.string(),
+    groupId: v.id("studyGroups"),
+    subject: v.string(),
+    topics: v.optional(v.record(v.string(), v.number())),
+    timeSpent: v.optional(v.number()),
+    weakAreas: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    // Ensure the group exists
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Study group not found");
+    }
+    
+    // Ensure user is a member of the group
+    if (!group.members.includes(args.userId)) {
+      throw new Error("User is not a member of this group");
+    }
+    
+    // Find existing progress record
+    const existingProgress = await ctx.db
+      .query("progress")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("groupId"), args.groupId))
+      .first();
+    
+    if (existingProgress) {
+      // Update existing record
+      const updates: any = {
+        lastUpdated: Date.now(),
+      };
+      
+      if (args.topics) {
+        updates.topics = {
+          ...existingProgress.topics,
+          ...args.topics,
+        };
+      }
+      
+      if (args.timeSpent) {
+        updates.timeSpent = existingProgress.timeSpent + args.timeSpent;
+      }
+      
+      if (args.weakAreas) {
+        updates.weakAreas = args.weakAreas;
+      }
+      
+      await ctx.db.patch(existingProgress._id, updates);
+      return existingProgress._id;
+    } else {
+      // Create new progress record
+      const progressId = await ctx.db.insert("progress", {
+        userId: args.userId,
+        groupId: args.groupId,
+        subject: args.subject,
+        topics: args.topics || {},
+        problemsSolved: 0,
+        timeSpent: args.timeSpent || 0,
+        weakAreas: args.weakAreas || [],
+        lastUpdated: Date.now(),
+      });
+      
+      return progressId;
+    }
+  },
+});
+
+// Get a user's progress in a group
+export const getByUserAndGroup = query({
+  args: {
+    userI

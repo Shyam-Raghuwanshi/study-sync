@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Users,
@@ -13,7 +12,8 @@ import {
   ChevronLeft,
   Menu,
   Download,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,16 +32,17 @@ import { useAuth } from '@clerk/clerk-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
+import { Id } from '../../convex/_generated/dataModel';
 import { File, Image } from "lucide-react";
 
 interface Message {
-  id: string;
+  _id: Id<"messages">;
   userId: string;
-  userName: string;
-  avatar: string;
   content: string;
-  timestamp: string;
-  isAI: boolean;
+  timestamp: number;
+  isAIGenerated: boolean;
+  sessionId: Id<"studySessions">;
+  attachments?: string[];
 }
 
 const SessionRoom = () => {
@@ -50,74 +51,106 @@ const SessionRoom = () => {
   const [showSidebar, setShowSidebar] = useState(true);
   const [message, setMessage] = useState('');
   const { userId } = useAuth();
-  // Mock data for a study session (would come from API in real implementation)
-  const session = {
-    id: id || '1',
-    name: 'Quantum Mechanics Review',
-    groupName: 'Physics 101',
-    groupId: '1',
-    subject: 'Physics',
-    startTime: 'Started at 3:00 PM',
-    duration: '2 hours',
-    participants: [
-      { id: '1', name: 'Alex Johnson', active: true, avatar: '/placeholder.svg' },
-      { id: '2', name: 'Maria Rodriguez', active: true, avatar: '/placeholder.svg' },
-      { id: '3', name: 'David Kim', active: false, avatar: '/placeholder.svg' },
-      { id: '4', name: 'Sarah Chen', active: true, avatar: '/placeholder.svg' },
-      { id: '5', name: 'James Wilson', active: false, avatar: '/placeholder.svg' }
-    ],
-    messages: [
-      {
-        id: '1',
-        userId: '1',
-        userName: 'Alex Johnson',
-        avatar: '/placeholder.svg',
-        content: 'Hey everyone! Welcome to our quantum mechanics review session.',
-        timestamp: '3:01 PM',
-        isAI: false
-      },
-      {
-        id: '2',
-        userId: '2',
-        userName: 'Maria Rodriguez',
-        avatar: '/placeholder.svg',
-        content: 'Thanks for setting this up. I\'ve been struggling with wave functions lately.',
-        timestamp: '3:02 PM',
-        isAI: false
-      },
-      {
-        id: '3',
-        userId: '5',
-        userName: 'AI Tutor',
-        avatar: '/placeholder.svg',
-        content: 'Welcome everyone! I\'m your AI tutor for today\'s session. What specific aspects of quantum mechanics would you like to focus on?',
-        timestamp: '3:03 PM',
-        isAI: true
+
+  // Fetch messages in real-time
+  const messages = useQuery(api.messages.getBySession, id ? {
+    sessionId: id as Id<"studySessions">,
+    limit: 50
+  } : 'skip');
+
+  // Get session details
+  const session = useQuery(api.studySessions.get, id ? { id: id as Id<"studySessions"> } : 'skip');
+
+  const sendMessage = useMutation(api.messages.send);
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !id || !userId) return;
+
+    try {
+      // Send the user's message
+      await sendMessage({
+        sessionId: id as Id<"studySessions">,
+        userId: userId,
+        content: message.trim(),
+        isAIGenerated: false
+      });
+
+      setMessage('');
+
+      // If the message mentions the AI tutor, send an AI response
+      if (message.toLowerCase().includes('ai tutor') || message.toLowerCase().includes('@ai')) {
+        // Add a small delay to make it feel more natural
+        setTimeout(async () => {
+          await sendMessage({
+            sessionId: id as Id<"studySessions">,
+            userId: 'AI Tutor',
+            content: 'I noticed you mentioned me! I can help you understand concepts, solve problems, or create study materials. What would you like help with?',
+            isAIGenerated: true
+          });
+        }, 1000);
       }
-    ]
+    } catch (error) {
+      toast.error('Failed to send message');
+      console.error('Error sending message:', error);
+    }
   };
+
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
   const getGroupResources = useQuery(api.resources.getByGroup, groupId ? { groupId: groupId as any } : 'skip');
   const getDownloadUrl = useMutation(api.resources.getDownloadUrl);
   const deleteResource = useMutation(api.resources.deleteResource);
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      // In a real app, you would send this to an API
-      console.log('Sending message:', message);
-      setMessage('');
-    }
-  };
+
+  // Show loading state while data is being fetched
+  if (!messages || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
+          <p className="text-gray-500">Loading study session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle errors
+  if (!id || !groupId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-900 mb-2">Session Not Found</p>
+          <p className="text-gray-500 mb-4">This study session doesn't exist or you don't have access to it.</p>
+          <Button asChild variant="outline">
+            <a href="/dashboard">Return to Dashboard</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
   };
-
 
   function getResourceIcon(type: string) {
     if (type.startsWith('image/')) return <Image className="h-5 w-5" />;
     if (type.includes('pdf')) return <FileText className="h-5 w-5" />;
     return <File className="h-5 w-5" />;
   }
-
 
   const handleDownload = async (resourceId: string) => {
     try {
@@ -229,32 +262,56 @@ const SessionRoom = () => {
               </div>
             </div>
 
-            <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto">
+            <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
               <div className="container mx-auto max-w-4xl">
                 <div className="space-y-4">
-                  {session.messages.map((msg) => (
-                    <div key={msg.id} className="flex items-start space-x-3">
-                      <Avatar className={cn("h-9 w-9", msg.isAI && "border-2 border-tertiary")}>
-                        <AvatarImage src={msg.avatar} alt={msg.userName} />
-                        <AvatarFallback>{msg.userName.charAt(0)}</AvatarFallback>
+                  {messages?.map((msg) => (
+                    <div key={msg._id} className="flex items-start space-x-3">
+                      <Avatar className={cn("h-9 w-9", msg.isAIGenerated && "border-2 border-tertiary")}>
+                        <AvatarFallback>{msg.userId[0]?.toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-medium">{msg.userName}</span>
-                          {msg.isAI && (
+                          <span className="font-medium">{msg.userId}</span>
+                          {msg.isAIGenerated && (
                             <Badge variant="outline" className="bg-tertiary/10 text-tertiary border-tertiary/20 text-xs">
                               AI Tutor
                             </Badge>
                           )}
-                          <span className="text-xs text-gray-500">{msg.timestamp}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(msg.timestamp).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
                         </div>
-                        <div className="mt-1 text-gray-800">{msg.content}</div>
+                        <div className="mt-1 text-gray-800 whitespace-pre-wrap">{msg.content}</div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             </TabsContent>
+
+            {/* Chat input (only on chat tab) */}
+            {activeTab === 'chat' && (
+              <div className="bg-white border-t p-4">
+                <div className="container mx-auto max-w-4xl">
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Type your message... (@ mention AI Tutor for help)"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSendMessage} disabled={!message.trim()}>
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <TabsContent value="document" className="flex-1 flex items-center justify-center p-4">
               <div className="text-center p-8 max-w-md">
@@ -343,26 +400,6 @@ const SessionRoom = () => {
                 <Button className="bg-tertiary hover:bg-tertiary/90">Ask AI Tutor</Button>
               </div>
             </TabsContent>
-
-            {/* Chat input (only on chat tab) */}
-            {activeTab === 'chat' && (
-              <div className="bg-white border-t p-4">
-                <div className="container mx-auto max-w-4xl">
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Type your message..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      className="flex-1"
-                    />
-                    <Button onClick={handleSendMessage}>
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
           </Tabs>
         </div>
 
