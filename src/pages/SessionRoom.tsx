@@ -34,6 +34,7 @@ import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
 import { Id } from '../../convex/_generated/dataModel';
 import { File, Image } from "lucide-react";
+import { format } from "date-fns"
 
 interface Message {
   _id: Id<"messages">;
@@ -52,6 +53,9 @@ const SessionRoom = () => {
   const [message, setMessage] = useState('');
   const { userId } = useAuth();
 
+  // Add joinSession mutation
+  const joinSession = useMutation(api.studySessions.joinSession);
+
   // Fetch messages in real-time
   const messages = useQuery(api.messages.getBySession, id ? {
     sessionId: id as Id<"studySessions">,
@@ -62,6 +66,18 @@ const SessionRoom = () => {
   const session = useQuery(api.studySessions.get, id ? { id: id as Id<"studySessions"> } : 'skip');
 
   const sendMessage = useMutation(api.messages.send);
+
+  // Auto-join session when entering the room
+  useEffect(() => {
+    if (id && userId && session) {
+      const promise = joinSession({ sessionId: id as Id<"studySessions">, userId })
+      toast.promise(promise, {
+        loading: 'Joining session...',
+        success: 'Joined session successfully!',
+        error: 'Failed to join session'
+      })
+    }
+  }, [id, userId, session]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || !id || !userId) return;
@@ -201,7 +217,7 @@ const SessionRoom = () => {
             <div className="flex items-center space-x-3">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
                 <Clock className="h-4 w-4 mr-2" />
-                <span>{session.startTime}</span>
+                <span>{format(new Date(session.startTime), 'yyyy-MM-dd HH:mm:ss')}</span>
               </div>
 
               <div className="flex -space-x-2">
