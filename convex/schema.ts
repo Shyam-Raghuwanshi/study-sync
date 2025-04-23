@@ -55,9 +55,11 @@ export default defineSchema({
     endTime: v.optional(v.float64()),
     groupId: v.id("studyGroups"),
     isActive: v.boolean(),
+    status: v.string(),
     name: v.string(),
     participants: v.array(v.string()),
     startTime: v.float64(),
+    createdBy: v.string(),
   })
     .index("by_active", ["isActive"])
     .index("by_group", ["groupId"]),

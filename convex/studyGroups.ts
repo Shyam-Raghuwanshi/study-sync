@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 
 // Create a new study group
 export const create = mutation({
@@ -35,7 +34,6 @@ export const create = mutation({
 export const getAll = query({
     args: {
         subject: v.optional(v.string()),
-        userId: v.optional(v.string()),
         onlyPublic: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
@@ -43,21 +41,21 @@ export const getAll = query({
         if (!identity) {
             throw new Error("User not authenticated");
         }
-        let query: any = ctx.db.query("studyGroups");
-
+        let query:any = ctx.db.query("studyGroups");
+        const userId = identity.subject;
         if (args.subject) {
-            query = query.withIndex("by_subject", (q) => q.eq("subject", args.subject));
+            query = query.withIndex("by_subject", (q) => q.eq("subject", args.subject),);
         }
 
-        if (args.userId) {
-            query = query.withIndex("by_member", (q) => q.eq("members", args.userId));
-        }
+        // if (userId) {
+        //     query = query.withIndex("by_member", (q) => q.eq("members", userId));
+        // }
 
         if (args.onlyPublic) {
             query = query.filter((q) => q.eq(q.field("isPublic"), true));
         }
-
-        return await query.collect();
+        const groups = await query.collect();
+        return groups
     },
 });
 
@@ -106,7 +104,6 @@ export const joinGroup = mutation({
             throw new Error("User not authenticated");
         }
         const userId = identity.subject;
-        console.log(userId, "User ID");
         const group = await ctx.db.get(args.groupId);
         if (!group) {
             throw new Error("Study group not found");

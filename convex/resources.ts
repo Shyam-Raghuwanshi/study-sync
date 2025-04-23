@@ -13,7 +13,6 @@ export const create = mutation({
   args: {
     name: v.string(),
     storageId: v.id("_storage"),
-    createdBy: v.string(),
     groupId: v.id("studyGroups"),
     sessionId: v.optional(v.id("studySessions")),
     type: v.string(), // e.g., "document", "image", "pdf"
@@ -21,34 +20,38 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     // Ensure the group exists
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
     const group = await ctx.db.get(args.groupId);
     if (!group) {
       throw new Error("Study group not found");
     }
-    
+    const userId = user.subject;
     // Ensure user is a member of the group
-    if (!group.members.includes(args.createdBy)) {
+    if (!group.members.includes(userId)) {
       throw new Error("User is not a member of this group");
     }
-    
+
     const resourceId = await ctx.db.insert("resources", {
       name: args.name,
       storageId: args.storageId,
-      createdBy: args.createdBy,
+      createdBy: userId,
       groupId: args.groupId,
       sessionId: args.sessionId,
       type: args.type,
       description: args.description,
       lastUpdated: Date.now(),
       version: 1,
-      contributorIds: [args.createdBy],
+      contributorIds: [userId],
     });
-    
+
     // Update group's last active timestamp
     await ctx.db.patch(args.groupId, {
       lastActive: Date.now(),
     });
-    
+
     return resourceId;
   },
 });
@@ -97,44 +100,44 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const { id, name, description, userId } = args;
-    
+
     const resource = await ctx.db.get(id);
     if (!resource) {
       throw new Error("Resource not found");
     }
-    
+
     // Check if the group exists and the user is a member
     const group = await ctx.db.get(resource.groupId);
     if (!group || !group.members.includes(userId)) {
       throw new Error("User is not authorized to update this resource");
     }
-    
+
     // Update the resource metadata
-    const updates: any = {
+    const updates: { lastUpdated: number; version: number; name?: string; description?: string; contributorIds?: string[] } = {
       lastUpdated: Date.now(),
       version: resource.version + 1,
     };
-    
+
     if (name) {
       updates.name = name;
     }
-    
+
     if (description) {
       updates.description = description;
     }
-    
+
     // Add user to contributors if not already there
     if (!resource.contributorIds.includes(userId)) {
       updates.contributorIds = [...resource.contributorIds, userId];
     }
-    
+
     await ctx.db.patch(id, updates);
-    
+
     // Update group's last active timestamp
     await ctx.db.patch(resource.groupId, {
       lastActive: Date.now(),
     });
-    
+
     return id;
   },
 });
@@ -150,7 +153,7 @@ export const deleteResource = mutation({
     if (!resource) {
       throw new Error("Resource not found");
     }
-    
+
     // Check if user is the creator
     if (resource.createdBy !== args.userId) {
       // If not creator, check if user is a member of the group
@@ -159,10 +162,10 @@ export const deleteResource = mutation({
         throw new Error("Not authorized to delete this resource");
       }
     }
-    
+
     // Delete the file from storage
     await ctx.storage.delete(resource.storageId);
-    
+
     // Delete the resource record
     await ctx.db.delete(args.id);
     return true;

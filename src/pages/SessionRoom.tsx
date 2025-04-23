@@ -1,30 +1,38 @@
 
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { 
-  Users, 
-  MessageSquare, 
-  FileText, 
-  Pencil, 
+import {
+  Users,
+  MessageSquare,
+  FileText,
+  Pencil,
   Sparkles,
   Clock,
   Send,
   BookOpen,
   ChevronLeft,
-  Menu
+  Menu,
+  Download,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import ResourceUpload from '@/components/dashboard/ResourceUpload';
+import { useAuth } from '@clerk/clerk-react';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { toast } from 'sonner';
+import { File, Image } from "lucide-react";
 
 interface Message {
   id: string;
@@ -37,11 +45,11 @@ interface Message {
 }
 
 const SessionRoom = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, groupId } = useParams<{ id: string, groupId: string }>();
   const [activeTab, setActiveTab] = useState('chat');
   const [showSidebar, setShowSidebar] = useState(true);
   const [message, setMessage] = useState('');
-  
+  const { userId } = useAuth();
   // Mock data for a study session (would come from API in real implementation)
   const session = {
     id: id || '1',
@@ -59,36 +67,38 @@ const SessionRoom = () => {
       { id: '5', name: 'James Wilson', active: false, avatar: '/placeholder.svg' }
     ],
     messages: [
-      { 
-        id: '1', 
-        userId: '1', 
-        userName: 'Alex Johnson', 
-        avatar: '/placeholder.svg', 
-        content: 'Hey everyone! Welcome to our quantum mechanics review session.', 
+      {
+        id: '1',
+        userId: '1',
+        userName: 'Alex Johnson',
+        avatar: '/placeholder.svg',
+        content: 'Hey everyone! Welcome to our quantum mechanics review session.',
         timestamp: '3:01 PM',
         isAI: false
       },
-      { 
-        id: '2', 
-        userId: '2', 
-        userName: 'Maria Rodriguez', 
-        avatar: '/placeholder.svg', 
-        content: 'Thanks for setting this up. I\'ve been struggling with wave functions lately.', 
+      {
+        id: '2',
+        userId: '2',
+        userName: 'Maria Rodriguez',
+        avatar: '/placeholder.svg',
+        content: 'Thanks for setting this up. I\'ve been struggling with wave functions lately.',
         timestamp: '3:02 PM',
         isAI: false
       },
-      { 
-        id: '3', 
-        userId: '5', 
-        userName: 'AI Tutor', 
-        avatar: '/placeholder.svg', 
-        content: 'Welcome everyone! I\'m your AI tutor for today\'s session. What specific aspects of quantum mechanics would you like to focus on?', 
+      {
+        id: '3',
+        userId: '5',
+        userName: 'AI Tutor',
+        avatar: '/placeholder.svg',
+        content: 'Welcome everyone! I\'m your AI tutor for today\'s session. What specific aspects of quantum mechanics would you like to focus on?',
         timestamp: '3:03 PM',
         isAI: true
       }
     ]
   };
-
+  const getGroupResources = useQuery(api.resources.getByGroup, groupId ? { groupId: groupId as any } : 'skip');
+  const getDownloadUrl = useMutation(api.resources.getDownloadUrl);
+  const deleteResource = useMutation(api.resources.deleteResource);
   const handleSendMessage = () => {
     if (message.trim()) {
       // In a real app, you would send this to an API
@@ -101,6 +111,42 @@ const SessionRoom = () => {
     setShowSidebar(!showSidebar);
   };
 
+
+  function getResourceIcon(type: string) {
+    if (type.startsWith('image/')) return <Image className="h-5 w-5" />;
+    if (type.includes('pdf')) return <FileText className="h-5 w-5" />;
+    return <File className="h-5 w-5" />;
+  }
+
+
+  const handleDownload = async (resourceId: string) => {
+    try {
+      const downloadUrl = await getDownloadUrl({
+        id: resourceId as any,
+        userId: userId!,
+      });
+
+      // Open the download URL in a new tab
+      window.open(downloadUrl, '_blank');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download resource');
+    }
+  };
+
+  const handleDelete = async (resourceId: string) => {
+    try {
+      await deleteResource({
+        id: resourceId as any,
+        userId: userId!,
+      });
+      toast.success('Resource deleted successfully');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete resource');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -109,7 +155,7 @@ const SessionRoom = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <Button variant="ghost" size="icon" asChild className="mr-2">
-                <a href={`/groups/${session.groupId}`}>
+                <a href={`/dashboard`}>
                   <ChevronLeft className="h-5 w-5" />
                 </a>
               </Button>
@@ -118,13 +164,13 @@ const SessionRoom = () => {
                 <p className="text-sm text-gray-500">{session.groupName}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
                 <Clock className="h-4 w-4 mr-2" />
                 <span>{session.startTime}</span>
               </div>
-              
+
               <div className="flex -space-x-2">
                 {session.participants.slice(0, 3).map((participant) => (
                   <Avatar key={participant.id} className="h-8 w-8 border-2 border-white">
@@ -138,7 +184,7 @@ const SessionRoom = () => {
                   </div>
                 )}
               </div>
-              
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -217,7 +263,62 @@ const SessionRoom = () => {
                 <p className="text-gray-500 mb-4">
                   This is where you'll work on shared documents in real-time with your study group members.
                 </p>
-                <Button>Create Document</Button>
+                {userId && <ResourceUpload
+                  groupId={groupId}
+                  sessionId={id}
+                  onUploadComplete={() => {
+                    // Refresh resources list
+                    // invalidateQuery();
+                  }}
+                />}
+              </div>
+              <div className="space-y-4">
+                {getGroupResources?.map((resource) => (
+                  <div
+                    key={resource._id}
+                    className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="bg-primary/10 p-3 rounded">
+                        {getResourceIcon(resource.type)}
+                      </div>
+                      <div>
+                        <p className="font-medium">{resource.name}</p>
+                        {resource.description && (
+                          <p className="text-sm text-gray-500">{resource.description}</p>
+                        )}
+                        <p className="text-xs text-gray-400">
+                          Added by {resource.createdBy} • {new Date(resource._creationTime).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(resource._id)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                      {userId === resource.createdBy && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(resource._id)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {getGroupResources?.length === 0 && (
+                  <div className="text-center py-6 text-gray-500">
+                    No resources have been uploaded yet.
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -282,7 +383,7 @@ const SessionRoom = () => {
                   Resources
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="participants">
                 <h3 className="font-medium text-sm text-gray-500 mb-3">Active now ({session.participants.filter(p => p.active).length})</h3>
                 <div className="space-y-3">
@@ -299,7 +400,7 @@ const SessionRoom = () => {
                     </div>
                   ))}
                 </div>
-                
+
                 <h3 className="font-medium text-sm text-gray-500 mt-6 mb-3">Away ({session.participants.filter(p => !p.active).length})</h3>
                 <div className="space-y-3">
                   {session.participants.filter(p => !p.active).map((participant) => (
@@ -313,7 +414,7 @@ const SessionRoom = () => {
                   ))}
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="resources">
                 <div className="space-y-4">
                   <Card>
@@ -328,7 +429,7 @@ const SessionRoom = () => {
                       <Button size="sm" variant="outline" className="w-full">View</Button>
                     </CardContent>
                   </Card>
-                  
+
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center space-x-3 mb-2">
@@ -341,7 +442,7 @@ const SessionRoom = () => {
                       <Button size="sm" variant="outline" className="w-full">View</Button>
                     </CardContent>
                   </Card>
-                  
+
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center space-x-3 mb-2">
@@ -354,7 +455,7 @@ const SessionRoom = () => {
                       <Button size="sm" variant="outline" className="w-full">View</Button>
                     </CardContent>
                   </Card>
-                  
+
                   <Button variant="ghost" className="w-full">
                     <BookOpen className="h-4 w-4 mr-2" />
                     Upload Resource

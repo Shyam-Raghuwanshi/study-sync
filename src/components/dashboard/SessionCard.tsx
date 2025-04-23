@@ -11,6 +11,7 @@ interface SessionCardProps {
   id: string;
   name: string;
   groupName: string;
+  groupId: string;
   subject: string;
   date: string;
   time: string;
@@ -22,6 +23,7 @@ const SessionCard = ({
   id,
   name,
   groupName,
+  groupId,
   subject,
   date,
   time,
@@ -31,21 +33,21 @@ const SessionCard = ({
   return (
     <Card className={cn(
       "h-full overflow-hidden border-l-4 hover:shadow-md transition-shadow",
-      status === 'active' ? "border-l-tertiary" : 
-      status === 'upcoming' ? "border-l-primary" : 
-      "border-l-gray-300"
+      status === 'active' ? "border-l-tertiary" :
+        status === 'upcoming' ? "border-l-primary" :
+          "border-l-gray-300"
     )}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-semibold">{name}</CardTitle>
           <Badge className={cn(
-            status === 'active' ? "bg-tertiary" : 
-            status === 'upcoming' ? "bg-primary" : 
-            "bg-gray-400"
+            status === 'active' ? "bg-tertiary" :
+              status === 'upcoming' ? "bg-primary" :
+                "bg-gray-400"
           )}>
-            {status === 'active' ? 'Active Now' : 
-             status === 'upcoming' ? 'Upcoming' : 
-             'Completed'}
+            {status === 'active' ? 'Active Now' :
+              status === 'upcoming' ? 'Upcoming' :
+                'Completed'}
           </Badge>
         </div>
         <p className="text-sm text-gray-600">{groupName}</p>
@@ -54,7 +56,7 @@ const SessionCard = ({
         <Badge variant="outline" className="mb-3 text-xs">
           {subject}
         </Badge>
-        
+
         <div className="flex flex-col space-y-1 text-sm">
           <div className="flex items-center text-gray-500">
             <Calendar className="h-4 w-4 mr-2" />
@@ -80,15 +82,15 @@ const SessionCard = ({
               </Avatar>
             ))}
           </div>
-          <Button 
-            asChild 
-            size="sm" 
+          <Button
+            asChild
+            size="sm"
             variant={status === 'completed' ? "outline" : "default"}
           >
-            <Link to={`/sessions/${id}`}>
-              {status === 'active' ? 'Join Now' : 
-               status === 'upcoming' ? 'View Details' : 
-               'View Summary'}
+            <Link to={`/sessions/${id}/${groupId}`}>
+              {status === 'active' ? 'Join Now' :
+                status === 'upcoming' ? 'View Details' :
+                  'View Summary'}
             </Link>
           </Button>
         </div>

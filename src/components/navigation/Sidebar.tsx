@@ -154,7 +154,7 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
               ))}
 
               <Link
-                to="/groups"
+                to="/all-groups"
                 className="flex items-center px-3 py-2 text-sm font-medium text-primary hover:bg-gray-50 rounded-md"
               >
                 <span>View all groups</span>

@@ -35,16 +35,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import SessionCard from '@/components/dashboard/SessionCard';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import ResourceUpload from '@/components/dashboard/ResourceUpload';
 import { useAuth } from '@clerk/clerk-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+
+interface ScheduleSessionForm {
+  name: string;
+  description: string;
+  startTime: Date;
+}
 
 const GroupDetail = () => {
   const { id } = useParams<{ id: string }>();
-  console.log({ id })
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const { userId } = useAuth();
@@ -56,7 +62,7 @@ const GroupDetail = () => {
   const group = id ? useQuery(api.studyGroups.getById, { id: id as any }) : null;
   const sessions = id ? useQuery(api.studyGroups.getGroupSessions, { groupId: id as any }) : null;
   const members = id ? useQuery(api.studyGroups.getGroupMembers, { groupId: id as any }) : null;
-  const resources = id ? useQuery(api.studyGroups.getGroupResources, { groupId: id as any }) : null;
+  const resources = useQuery(api.studyGroups.getGroupResources, { groupId: id as any })
   const recentActivity = id ? useQuery(api.studyGroups.getRecentActivity, {
     groupId: id as any,
     limit: 5
@@ -64,8 +70,42 @@ const GroupDetail = () => {
   const getDownloadUrl = useMutation(api.resources.getDownloadUrl);
   const deleteResource = useMutation(api.resources.deleteResource);
   const getGroupResources = useQuery(api.resources.getByGroup, id ? { groupId: id as any } : 'skip');
-  console.log({members})
   const joinGroup = useMutation(api.studyGroups.joinGroup);
+  const createSession = useMutation(api.studySessions.create);
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  const form = useForm<ScheduleSessionForm>({
+    defaultValues: {
+      name: "",
+      description: "",
+      startTime: new Date(),
+    },
+  });
+
+  const handleScheduleSession = async (data: ScheduleSessionForm) => {
+    if (!id || !userId) return;
+
+    try {
+      const promise = createSession({
+        groupId: id as any,
+        name: data.name,
+        description: data.description,
+        startTime: data.startTime.getTime(),
+      });
+
+      toast.promise(promise, {
+        loading: 'Scheduling session...',
+        success: () => {
+          setIsScheduling(false);
+          form.reset();
+          return 'Session scheduled successfully!';
+        },
+        error: 'Failed to schedule session',
+      });
+    } catch (error) {
+      console.error('Error scheduling session:', error);
+    }
+  };
 
   // Show loading state while data is being fetched
   if ((id && (!group || !sessions || !members || !resources || !recentActivity)) || (!id && !allGroups)) {
@@ -105,7 +145,7 @@ const GroupDetail = () => {
         id: resourceId as any,
         userId: userId!,
       });
-      
+
       // Open the download URL in a new tab
       window.open(downloadUrl, '_blank');
     } catch (error) {
@@ -133,59 +173,6 @@ const GroupDetail = () => {
     return <File className="h-5 w-5" />;
   };
 
-  // If no id is provided, show all groups
-  if (!id) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col space-y-6">
-          <div className="flex justify-between items-start">
-            <h1 className="text-2xl font-bold">Study Groups</h1>
-            <Button onClick={() => navigate('/create-group')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Group
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {allGroups.map((group) => (
-              <Card key={group._id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/groups/${group._id}`)}>
-                <CardHeader>
-                  <div className="flex items-center space-x-2">
-                    <CardTitle>{group.name}</CardTitle>
-                    {group.isPublic ? (
-                      <Badge variant="outline" className="flex items-center text-gray-500">
-                        <Unlock className="h-3 w-3 mr-1" />
-                        Public
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="flex items-center text-gray-500">
-                        <Lock className="h-3 w-3 mr-1" />
-                        Private
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription>{group.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      {group.subject}
-                    </div>
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      {group.members.length} members
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   // If id is provided, show group details
   return (
     <DashboardLayout>
@@ -208,10 +195,76 @@ const GroupDetail = () => {
             </div>
             <p className="text-gray-500 mt-1">{group.description}</p>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Schedule Session
-          </Button>
+          <Dialog open={isScheduling} onOpenChange={setIsScheduling}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Schedule Session
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Schedule Study Session</DialogTitle>
+                <DialogDescription>
+                  Create a new study session for your group members.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleScheduleSession)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Session Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter session name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="What will you study in this session?"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Time</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit">Schedule Session</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={handleJoinGroup}>
             <JoystickIcon className="mr-2 h-4 w-4" />
             Join Group
@@ -288,6 +341,7 @@ const GroupDetail = () => {
                             id={session._id}
                             name={session.name}
                             groupName={group.name}
+                            groupId={id!}
                             subject={group.subject}
                             date={new Date(session.startTime).toLocaleDateString()}
                             time={new Date(session.startTime).toLocaleTimeString()}
@@ -408,6 +462,7 @@ const GroupDetail = () => {
                       id={session._id}
                       name={session.name}
                       groupName={group.name}
+                      groupId={id!}
                       subject={group.subject}
                       date={new Date(session.startTime).toLocaleDateString()}
                       time={new Date(session.startTime).toLocaleTimeString()}
@@ -455,21 +510,20 @@ const GroupDetail = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Study Resources</CardTitle>
-                  {userId && <ResourceUpload 
-                    groupId={id!} 
-                    userId={userId} 
+                  {userId && <ResourceUpload
+                    groupId={id!}
                     onUploadComplete={() => {
                       // Refresh resources list
                       // invalidateQuery();
-                    }} 
+                    }}
                   />}
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {getGroupResources?.map((resource) => (
-                    <div 
-                      key={resource._id} 
+                    <div
+                      key={resource._id}
                       className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50"
                     >
                       <div className="flex items-center space-x-4">

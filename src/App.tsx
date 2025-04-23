@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import GroupDetail from "./pages/GroupDetail";
 import SessionRoom from "./pages/SessionRoom";
 import NotFound from "./pages/NotFound";
+import AllGroups from "./pages/AllGroups";
 
 const App = () => (
   <main className="overflow-x-hidden">
@@ -19,8 +20,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/groups/:id" element={<GroupDetail />} />
-          <Route path="/groups" element={<GroupDetail />} />
-          <Route path="/sessions/:id" element={<SessionRoom />} />
+          <Route path="/all-groups" element={<AllGroups />} />
+          <Route path="/sessions/:id/:groupId" element={<SessionRoom />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

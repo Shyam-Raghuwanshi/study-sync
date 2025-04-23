@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as resources from "../resources.js";
 import type * as studyGroups from "../studyGroups.js";
+import type * as studySessions from "../studySessions.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -27,6 +28,7 @@ import type * as studyGroups from "../studyGroups.js";
 declare const fullApi: ApiFromModules<{
   resources: typeof resources;
   studyGroups: typeof studyGroups;
+  studySessions: typeof studySessions;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

@@ -10,11 +10,11 @@ import { toast } from 'sonner';
 
 interface ResourceUploadProps {
   groupId: string;
-  userId: string;
+  sessionId?: string;
   onUploadComplete?: () => void;
 }
 
-const ResourceUpload = ({ groupId, userId, onUploadComplete }: ResourceUploadProps) => {
+const ResourceUpload = ({ groupId, onUploadComplete, sessionId }: ResourceUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [name, setName] = useState('');
@@ -57,20 +57,22 @@ const ResourceUpload = ({ groupId, userId, onUploadComplete }: ResourceUploadPro
       const { storageId } = json;
 
       // Create resource record
-      await createResource({
+      const promise = createResource({
         name,
         storageId,
-        createdBy: userId,
         groupId: groupId as any,
+        sessionId: sessionId as any,
         type: selectedFile.type,
         description: description || undefined,
       });
-
-      toast.success('Resource uploaded successfully');
+      toast.promise(promise, {
+        success: "Resource uploaded successfully!",
+        loading: "Uploading resource...",
+        error: "Failed to upload resource",
+      })
       setIsOpen(false);
       onUploadComplete?.();
 
-      // Reset form
       setSelectedFile(null);
       setName('');
       setDescription('');
