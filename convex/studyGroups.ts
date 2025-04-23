@@ -207,7 +207,7 @@ export const deleteGroup = mutation({
 
             // Delete documents linked to this session
             const sessionDocs = await ctx.db
-                .query("documents")
+                .query("resources")
                 .withIndex("by_session", (q) => q.eq("sessionId", session._id))
                 .collect();
 
@@ -221,7 +221,7 @@ export const deleteGroup = mutation({
 
         // 3. Delete documents linked to this group
         const groupDocs = await ctx.db
-            .query("documents")
+            .query("resources")
             .withIndex("by_group", (q) => q.eq("groupId", args.id))
             .collect();
 
@@ -264,7 +264,7 @@ export const getRecentActivity = query({
 
         // Get recent documents
         const recentDocs = await ctx.db
-            .query("documents")
+            .query("resources")
             .withIndex("by_group", (q) => q.eq("groupId", args.groupId))
             .order("desc")
             .take(limit);
@@ -322,7 +322,7 @@ export const getGroupResources = query({
     args: { groupId: v.id("studyGroups") },
     handler: async (ctx, args) => {
         const resources = await ctx.db
-            .query("documents")
+            .query("resources")
             .withIndex("by_group", (q) => q.eq("groupId", args.groupId))
             .collect();
         return resources;

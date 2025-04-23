@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -9,7 +9,15 @@ import {
   Lock,
   Unlock,
   User,
-  JoystickIcon
+  JoystickIcon,
+  Upload,
+  Trash,
+  FileText,
+  Download,
+  FileUp,
+  Image,
+  File,
+  Trash2
 } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -27,17 +35,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import SessionCard from '@/components/dashboard/SessionCard';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import ResourceUpload from '@/components/dashboard/ResourceUpload';
+import { useAuth } from '@clerk/clerk-react';
 
 const GroupDetail = () => {
   const { id } = useParams<{ id: string }>();
   console.log({ id })
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const { userId } = useAuth();
 
   // Fetch all groups if no id is provided
   const allGroups = useQuery(api.studyGroups.getAll, {});
-
-
 
   // Only fetch specific group data if id is present
   const group = id ? useQuery(api.studyGroups.getById, { id: id as any }) : null;
@@ -48,6 +61,9 @@ const GroupDetail = () => {
     groupId: id as any,
     limit: 5
   }) : null;
+  const getDownloadUrl = useMutation(api.resources.getDownloadUrl);
+  const deleteResource = useMutation(api.resources.deleteResource);
+  const getGroupResources = useQuery(api.resources.getByGroup, id ? { groupId: id as any } : 'skip');
   console.log({members})
   const joinGroup = useMutation(api.studyGroups.joinGroup);
 
@@ -82,6 +98,41 @@ const GroupDetail = () => {
       console.error('Error joining group:', error);
     }
   }
+
+  const handleDownload = async (resourceId: string) => {
+    try {
+      const downloadUrl = await getDownloadUrl({
+        id: resourceId as any,
+        userId: userId!,
+      });
+      
+      // Open the download URL in a new tab
+      window.open(downloadUrl, '_blank');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download resource');
+    }
+  };
+
+  const handleDelete = async (resourceId: string) => {
+    try {
+      await deleteResource({
+        id: resourceId as any,
+        userId: userId!,
+      });
+      toast.success('Resource deleted successfully');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete resource');
+    }
+  };
+
+  const getResourceIcon = (type: string) => {
+    if (type.startsWith('image/')) return <Image className="h-5 w-5" />;
+    if (type.includes('pdf')) return <FileText className="h-5 w-5" />;
+    return <File className="h-5 w-5" />;
+  };
+
   // If no id is provided, show all groups
   if (!id) {
     return (
@@ -404,33 +455,64 @@ const GroupDetail = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Study Resources</CardTitle>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Resource
-                  </Button>
+                  {userId && <ResourceUpload 
+                    groupId={id!} 
+                    userId={userId} 
+                    onUploadComplete={() => {
+                      // Refresh resources list
+                      // invalidateQuery();
+                    }} 
+                  />}
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {resources.map(resource => (
-                    <div key={resource._id} className="flex items-center justify-between p-4 border rounded-md">
+                  {getGroupResources?.map((resource) => (
+                    <div 
+                      key={resource._id} 
+                      className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50"
+                    >
                       <div className="flex items-center space-x-4">
                         <div className="bg-primary/10 p-3 rounded">
-                          <BookOpen className="h-5 w-5 text-primary" />
+                          {getResourceIcon(resource.type)}
                         </div>
                         <div>
                           <p className="font-medium">{resource.name}</p>
-                          <p className="text-sm text-gray-500">
-                            Added by {resource.createdBy} on {new Date(resource._creationTime).toLocaleDateString()}
+                          {resource.description && (
+                            <p className="text-sm text-gray-500">{resource.description}</p>
+                          )}
+                          <p className="text-xs text-gray-400">
+                            Added by {resource.createdBy} • {new Date(resource._creationTime).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">Download</Button>
-                        <Button variant="ghost" size="sm">View</Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownload(resource._id)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                        {userId === resource.createdBy && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(resource._id)}
+                            className="text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
+                  {getGroupResources?.length === 0 && (
+                    <div className="text-center py-6 text-gray-500">
+                      No resources have been uploaded yet.
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

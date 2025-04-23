@@ -2,18 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  documents: defineTable({
-    content: v.string(),
-    contributorIds: v.array(v.string()),
-    createdBy: v.string(),
-    groupId: v.id("studyGroups"),
-    lastUpdated: v.float64(),
-    name: v.string(),
-    sessionId: v.optional(v.id("studySessions")),
-    version: v.float64(),
-  })
-    .index("by_group", ["groupId"])
-    .index("by_session", ["sessionId"]),
   messages: defineTable({
     attachments: v.optional(v.array(v.string())),
     content: v.string(),
@@ -80,4 +68,19 @@ export default defineSchema({
     sessionId: v.id("studySessions"),
     snapshots: v.array(v.any()),
   }).index("by_session", ["sessionId"]),
+  resources: defineTable({
+    name: v.string(),
+    storageId: v.id("_storage"),
+    createdBy: v.string(),
+    groupId: v.id("studyGroups"),
+    sessionId: v.optional(v.id("studySessions")),
+    type: v.string(),
+    description: v.optional(v.string()),
+    lastUpdated: v.number(),
+    version: v.number(),
+    contributorIds: v.array(v.string()),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_session", ["sessionId"])
+    .index("by_creator", ["createdBy"]),
 });
