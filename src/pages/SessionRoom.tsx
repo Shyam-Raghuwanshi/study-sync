@@ -63,19 +63,7 @@ const SessionRoom = () => {
   const session = useQuery(api.studySessions.get, id ? { id: id as Id<"studySessions"> } : 'skip');
 
   const sendMessage = useMutation(api.messages.send);
-
-  // Auto-join session when entering the room
-  // useEffect(() => {
-  //   if (id && userId && session) {
-  //     const promise = joinSession({ sessionId: id as Id<"studySessions">, userId })
-  //     toast.promise(promise, {
-  //       loading: 'Joining session...',
-  //       success: 'Joined session successfully!',
-  //       error: 'Failed to join session'
-  //     })
-  //   }
-  // }, [id, userId, session]);
-
+ 
   const handleSendMessage = async () => {
     if (!message.trim() || !id || !userId) return;
 

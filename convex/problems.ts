@@ -1,7 +1,5 @@
-// convex/problems.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 
 // Create a new problem
 export const create = mutation({
@@ -149,83 +147,3 @@ export const deleteProblem = mutation({
     return true;
   },
 });
-
-// convex/progress.ts
-import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-
-// Initialize or update a user's progress
-export const upsertProgress = mutation({
-  args: {
-    userId: v.string(),
-    groupId: v.id("studyGroups"),
-    subject: v.string(),
-    topics: v.optional(v.record(v.string(), v.number())),
-    timeSpent: v.optional(v.number()),
-    weakAreas: v.optional(v.array(v.string())),
-  },
-  handler: async (ctx, args) => {
-    // Ensure the group exists
-    const group = await ctx.db.get(args.groupId);
-    if (!group) {
-      throw new Error("Study group not found");
-    }
-    
-    // Ensure user is a member of the group
-    if (!group.members.includes(args.userId)) {
-      throw new Error("User is not a member of this group");
-    }
-    
-    // Find existing progress record
-    const existingProgress = await ctx.db
-      .query("progress")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("groupId"), args.groupId))
-      .first();
-    
-    if (existingProgress) {
-      // Update existing record
-      const updates: any = {
-        lastUpdated: Date.now(),
-      };
-      
-      if (args.topics) {
-        updates.topics = {
-          ...existingProgress.topics,
-          ...args.topics,
-        };
-      }
-      
-      if (args.timeSpent) {
-        updates.timeSpent = existingProgress.timeSpent + args.timeSpent;
-      }
-      
-      if (args.weakAreas) {
-        updates.weakAreas = args.weakAreas;
-      }
-      
-      await ctx.db.patch(existingProgress._id, updates);
-      return existingProgress._id;
-    } else {
-      // Create new progress record
-      const progressId = await ctx.db.insert("progress", {
-        userId: args.userId,
-        groupId: args.groupId,
-        subject: args.subject,
-        topics: args.topics || {},
-        problemsSolved: 0,
-        timeSpent: args.timeSpent || 0,
-        weakAreas: args.weakAreas || [],
-        lastUpdated: Date.now(),
-      });
-      
-      return progressId;
-    }
-  },
-});
-
-// Get a user's progress in a group
-export const getByUserAndGroup = query({
-  args: {
-    userI
