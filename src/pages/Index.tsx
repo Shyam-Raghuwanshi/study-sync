@@ -17,18 +17,7 @@ const Index = () => {
             <span className="text-primary font-bold text-xl">StudySync</span>
           </div>
           <div className="flex items-center space-x-4">
-            {isLoading && <Loader />}
-            {!isAuthenticated && !isLoading && <>
-              <Button variant="ghost" asChild>
-                <SignInButton />
-              </Button>
-              <Button asChild>
-                <SignUpButton />
-              </Button>
-            </>}
-
-            {isAuthenticated && <UserButton />}
-
+            <UserProfile />
           </div>
         </div>
       </header >

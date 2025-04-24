@@ -1,16 +1,10 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, Bell, Search, User } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem 
-} from '@/components/ui/dropdown-menu';
+import UserProfile from '../user-profile';
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -49,9 +43,9 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
             ) : (
-              <Button 
-                variant="ghost" 
-                className="text-gray-500" 
+              <Button
+                variant="ghost"
+                className="text-gray-500"
                 onClick={() => setShowSearch(true)}
               >
                 <Search className="h-5 w-5 mr-2" />
@@ -61,38 +55,7 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
           </div>
 
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="text-gray-500 relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary"></span>
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="ml-2 relative rounded-full" size="icon">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg" alt="User" />
-                    <AvatarFallback>US</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Link to="/profile" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link to="/settings" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <UserProfile />
           </div>
         </div>
       </div>

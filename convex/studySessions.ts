@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { useId } from "react";
 
 // Create a new study session
 export const create = mutation({

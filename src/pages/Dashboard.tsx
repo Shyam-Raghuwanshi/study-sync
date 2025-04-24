@@ -86,6 +86,7 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {upcomingSessions.map((session) => (
                     <SessionCard
+                      groupId=''
                       key={session.id}
                       id={session.id}
                       name={session.name}
