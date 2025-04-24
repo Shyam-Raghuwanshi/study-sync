@@ -44,7 +44,7 @@ export const getAll = query({
         let query:any = ctx.db.query("studyGroups");
         const userId = identity.subject;
         if (args.subject) {
-            query = query.withIndex("by_subject", (q) => q.eq("subject", args.subject),);
+            query = query.withIndex("by_subject", (q:any) => q.eq("subject", args.subject),);
         }
 
         // if (userId) {
@@ -52,7 +52,7 @@ export const getAll = query({
         // }
 
         if (args.onlyPublic) {
-            query = query.filter((q) => q.eq(q.field("isPublic"), true));
+            query = query.filter((q:any) => q.eq(q.field("isPublic"), true));
         }
         const groups = await query.collect();
         return groups

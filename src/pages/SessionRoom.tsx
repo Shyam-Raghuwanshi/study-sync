@@ -14,18 +14,12 @@ import {
   Download,
   Trash2,
   Loader2,
-  Undo,
-  Redo,
-  Save
+  File,
+  Image
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +30,8 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
 import { Id } from '../../convex/_generated/dataModel';
-import { File, Image } from "lucide-react";
-import { format } from "date-fns"
+import { format } from "date-fns";
+import { WhiteBoard } from '@/components/ui/whiteboard';
 
 interface Message {
   _id: Id<"messages">;
@@ -47,13 +41,6 @@ interface Message {
   isAIGenerated: boolean;
   sessionId: Id<"studySessions">;
   attachments?: string[];
-}
-
-interface WhiteboardElement {
-  type: string;
-  points?: number[][];
-  color: string;
-  width: number;
 }
 
 const SessionRoom = () => {
@@ -78,16 +65,16 @@ const SessionRoom = () => {
   const sendMessage = useMutation(api.messages.send);
 
   // Auto-join session when entering the room
-  useEffect(() => {
-    if (id && userId && session) {
-      const promise = joinSession({ sessionId: id as Id<"studySessions">, userId })
-      toast.promise(promise, {
-        loading: 'Joining session...',
-        success: 'Joined session successfully!',
-        error: 'Failed to join session'
-      })
-    }
-  }, [id, userId, session]);
+  // useEffect(() => {
+  //   if (id && userId && session) {
+  //     const promise = joinSession({ sessionId: id as Id<"studySessions">, userId })
+  //     toast.promise(promise, {
+  //       loading: 'Joining session...',
+  //       success: 'Joined session successfully!',
+  //       error: 'Failed to join session'
+  //     })
+  //   }
+  // }, [id, userId, session]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || !id || !userId) return;
@@ -141,82 +128,7 @@ const SessionRoom = () => {
   const getDownloadUrl = useMutation(api.resources.getDownloadUrl);
   const deleteResource = useMutation(api.resources.deleteResource);
 
-  const [whiteboardElements, setWhiteboardElements] = useState<WhiteboardElement[]>([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentColor, setCurrentColor] = useState('#000000');
-  const [currentWidth, setCurrentWidth] = useState(2);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const createWhiteboard = useMutation(api.whiteboards.create);
-  const updateWhiteboardElements = useMutation(api.whiteboards.updateElements);
   const getWhiteboard = useQuery(api.whiteboards.getBySession, id ? { sessionId: id as Id<"studySessions"> } : 'skip');
-
-  // Handle canvas rendering
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Set canvas size to match container size
-    const resizeCanvas = () => {
-      const container = canvas.parentElement;
-      if (!container) return;
-      
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-    };
-
-    // Initial resize
-    resizeCanvas();
-
-    // Listen for window resize
-    window.addEventListener('resize', resizeCanvas);
-
-    // Draw all elements
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw each element
-    whiteboardElements.forEach(element => {
-      if (element.type === 'path' && element.points) {
-        ctx.beginPath();
-        ctx.strokeStyle = element.color;
-        ctx.lineWidth = element.width;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        // Move to first point
-        const [startX, startY] = element.points[0];
-        ctx.moveTo(startX, startY);
-
-        // Draw lines to subsequent points
-        element.points.slice(1).forEach(([x, y]) => {
-          ctx.lineTo(x, y);
-        });
-
-        ctx.stroke();
-      }
-    });
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-    };
-  }, [whiteboardElements]);
-
-  // Initialize whiteboard
-  useEffect(() => {
-    if (id && !getWhiteboard?.length) {
-      createWhiteboard({
-        name: 'Session Whiteboard',
-        sessionId: id as Id<"studySessions">
-      }).then((whiteboardId) => {
-        console.log('Created new whiteboard:', whiteboardId);
-      });
-    } else if (getWhiteboard?.length) {
-      setWhiteboardElements(getWhiteboard[0].elements || []);
-    }
-  }, [id, getWhiteboard]);
 
   // Show loading state while data is being fetched
   if (!messages || !session) {
@@ -482,112 +394,10 @@ const SessionRoom = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="whiteboard" className="flex-1 flex flex-col p-4">
-              <div className="container mx-auto max-w-6xl flex-1 flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm">Color:</label>
-                      <input 
-                        type="color" 
-                        value={currentColor}
-                        onChange={(e) => setCurrentColor(e.target.value)}
-                        className="w-8 h-8 rounded cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm">Width:</label>
-                      <input 
-                        type="range" 
-                        min="1" 
-                        max="10" 
-                        value={currentWidth}
-                        onChange={(e) => setCurrentWidth(parseInt(e.target.value))}
-                        className="w-32"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      if (whiteboardElements.length > 0) {
-                        const elements = [...whiteboardElements];
-                        elements.pop();
-                        setWhiteboardElements(elements);
-                        updateWhiteboardElements({
-                          id: getWhiteboard?.[0]?._id as any,
-                          elements: elements
-                        });
-                      }
-                    }}>
-                      <Undo className="h-4 w-4 mr-2" />
-                      Undo
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      if (getWhiteboard?.[0]) {
-                        updateWhiteboardElements({
-                          id: getWhiteboard[0]._id as any,
-                          elements: whiteboardElements,
-                          createSnapshot: true
-                        });
-                        toast.success('Whiteboard saved!');
-                      }
-                    }}>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="flex-1 border rounded-lg bg-white overflow-hidden">
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full h-full"
-                    onMouseDown={(e) => {
-                      const canvas = canvasRef.current;
-                      if (!canvas) return;
-                      
-                      const rect = canvas.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const y = e.clientY - rect.top;
-                      
-                      setIsDrawing(true);
-                      const newElement: WhiteboardElement = {
-                        type: 'path',
-                        points: [[x, y]],
-                        color: currentColor,
-                        width: currentWidth
-                      };
-                      setWhiteboardElements([...whiteboardElements, newElement]);
-                    }}
-                    onMouseMove={(e) => {
-                      if (!isDrawing) return;
-                      
-                      const canvas = canvasRef.current;
-                      if (!canvas) return;
-                      
-                      const rect = canvas.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const y = e.clientY - rect.top;
-                      
-                      const elements = [...whiteboardElements];
-                      const currentElement = elements[elements.length - 1];
-                      if (currentElement.points) {
-                        currentElement.points.push([x, y]);
-                        setWhiteboardElements(elements);
-                      }
-                    }}
-                    onMouseUp={() => {
-                      setIsDrawing(false);
-                      if (getWhiteboard?.[0]) {
-                        updateWhiteboardElements({
-                          id: getWhiteboard[0]._id as any,
-                          elements: whiteboardElements
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
+            <TabsContent value="whiteboard" className="flex-1 flex flex-col px-10 mt-0">
+              {getWhiteboard?.[0] && (
+                <WhiteBoard />
+              )}
             </TabsContent>
 
             <TabsContent value="ai-tutor" className="flex-1 flex items-center justify-center p-4">
@@ -604,10 +414,12 @@ const SessionRoom = () => {
         </div>
 
         {/* Sidebar */}
+        <ChevronLeft onClick={toggleSidebar} className={cn("h-6 w-6 text-black absolute z-[999] top-[50%]", showSidebar ? "right-[20.4rem]" : "right-[1rem]")} />
         <div className={cn(
           "fixed top-[58px] right-0 bottom-0 w-80 bg-white border-l border-gray-200 overflow-y-auto transition-transform z-20",
-          showSidebar ? "translate-x-0" : "translate-x-full lg:translate-x-0"
+          showSidebar ? "translate-x-0" : "translate-x-full"
         )}>
+
           <div className="p-4">
             <Tabs defaultValue="participants">
               <TabsList className="grid grid-cols-2 mb-4">
@@ -703,7 +515,7 @@ const SessionRoom = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

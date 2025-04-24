@@ -64,12 +64,10 @@ export default defineSchema({
     .index("by_active", ["isActive"])
     .index("by_group", ["groupId"]),
   whiteboards: defineTable({
-    elements: v.array(v.any()),
-    lastUpdated: v.float64(),
-    name: v.string(),
     sessionId: v.id("studySessions"),
-    snapshots: v.array(v.any()),
-  }).index("by_session", ["sessionId"]),
+    elements: v.any(),
+  })
+    .index("by_session", ["sessionId"]),
   resources: defineTable({
     name: v.string(),
     storageId: v.id("_storage"),

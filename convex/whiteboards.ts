@@ -4,7 +4,6 @@ import { mutation, query } from "./_generated/server";
 // Create a new whiteboard
 export const create = mutation({
     args: {
-        name: v.string(),
         sessionId: v.id("studySessions"),
     },
     handler: async (ctx, args) => {
@@ -25,11 +24,8 @@ export const create = mutation({
         }
 
         const whiteboardId = await ctx.db.insert("whiteboards", {
-            name: args.name,
             sessionId: args.sessionId,
-            elements: [],
-            snapshots: [],
-            lastUpdated: Date.now(),
+            elements: '[]',
         });
 
         return whiteboardId;
@@ -66,51 +62,39 @@ export const getById = query({
 });
 
 // Update a whiteboard with new elements
-export const updateElements = mutation({
+export const updateElementsBySessionId = mutation({
     args: {
-        id: v.id("whiteboards"),
-        elements: v.array(v.any()),
-        createSnapshot: v.optional(v.boolean()),
+      sessionId: v.id("studySessions"),
+      elements: v.any(),
     },
     handler: async (ctx, args) => {
-        const whiteboard = await ctx.db.get(args.id);
-        const user = await ctx.auth.getUserIdentity();
-        if (!user) {
-            throw new Error("User not authenticated");
-        }
-        if (!whiteboard) {
-            throw new Error("Whiteboard not found");
-        }
-        const userId = user.subject;
-
-        // Check if user is a participant in the session
-        const session = await ctx.db.get(whiteboard.sessionId);
-        if (!session || !session.participants.includes(userId)) {
-            throw new Error("User is not authorized to update this whiteboard");
-        }
-
-        const updates: any = {
-            elements: args.elements,
-            lastUpdated: Date.now(),
-        };
-
-        // Create a snapshot if requested
-        if (args.createSnapshot) {
-            updates.snapshots = [
-                ...whiteboard.snapshots,
-                {
-                    timestamp: Date.now(),
-                    elements: whiteboard.elements,
-                    createdBy: userId,
-                },
-            ];
-        }
-
-        await ctx.db.patch(args.id, updates);
-
-        return args.id;
+      const user = await ctx.auth.getUserIdentity();
+      if (!user) throw new Error("User not authenticated");
+  
+      // Find whiteboard by sessionId
+      const whiteboards = await ctx.db.query("whiteboards").filter((q) =>
+        q.eq(q.field("sessionId"), args.sessionId)
+      ).collect();
+  
+      if (whiteboards.length === 0) throw new Error("Whiteboard not found");
+  
+      const whiteboard = whiteboards[0];
+  
+      // Fetch session to validate participation
+      const session = await ctx.db.get(args.sessionId);
+      if (!session || !session.participants.includes(user.subject)) {
+        throw new Error("User is not authorized to update this whiteboard");
+      }
+  
+      // Update elements
+      await ctx.db.patch(whiteboard._id, {
+        elements: args.elements,
+      });
+  
+      return whiteboard._id;
     },
-});
+  });
+  
 
 // Delete a whiteboard
 export const deleteWhiteboard = mutation({

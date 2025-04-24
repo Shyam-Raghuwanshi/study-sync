@@ -3,11 +3,8 @@ import { Link } from 'react-router-dom';
 import { Sparkle, BookOpen, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { SignInButton, SignUpButton, UserButton, UserProfile } from '@clerk/clerk-react';
-import { useConvexAuth } from 'convex/react';
-import { Loader } from '@/components/ui/loader';
+import UserProfile from '@/components/user-profile';
 const Index = () => {
-  const { isAuthenticated, isLoading } = useConvexAuth();
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}

@@ -44,6 +44,10 @@ export const create = mutation({
             participants: [userId],
             createdBy: userId,
         });
+        await ctx.db.insert("whiteboards", {
+            sessionId: sessionId,
+            elements: "[]",
+        })
 
         // Update group's last active timestamp
         await ctx.db.patch(args.groupId, {
@@ -165,28 +169,28 @@ export const endSession = mutation({
 
 // Get a study session by ID
 export const get = query({
-  args: {
-    id: v.id("studySessions"),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.id);
-    if (!session) {
-      throw new Error("Study session not found");
-    }
+    args: {
+        id: v.id("studySessions"),
+    },
+    handler: async (ctx, args) => {
+        const session = await ctx.db.get(args.id);
+        if (!session) {
+            throw new Error("Study session not found");
+        }
 
-    // Get the group name
-    const group = await ctx.db.get(session.groupId);
-    
-    return {
-      ...session,
-      groupName: group?.name || "Unknown Group",
-      // Map participants to include active status
-      participants: session.participants.map(userId => ({
-        id: userId,
-        name: userId, // In a real app, you'd get user details from your auth service
-        active: true, // In a real app, you'd track this with presence
-        avatar: '/placeholder.svg'
-      }))
-    };
-  },
+        // Get the group name
+        const group = await ctx.db.get(session.groupId);
+
+        return {
+            ...session,
+            groupName: group?.name || "Unknown Group",
+            // Map participants to include active status
+            participants: session.participants.map(userId => ({
+                id: userId,
+                name: userId, // In a real app, you'd get user details from your auth service
+                active: true, // In a real app, you'd track this with presence
+                avatar: '/placeholder.svg'
+            }))
+        };
+    },
 });
