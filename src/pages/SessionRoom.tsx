@@ -322,17 +322,6 @@ const SessionRoom = () => {
             <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
               <div className="container mx-auto max-w-4xl">
                 {/* Debug section - to see if messages are actually coming through */}
-                <div className="mb-8 p-3 bg-gray-100 rounded">
-                  <h4 className="font-bold mb-2">Debug: Raw message data</h4>
-                  <p className="text-xs">Number of messages: {messages?.length || 0}</p>
-                  <div className="text-xs mt-1 max-h-28 overflow-y-auto">
-                    {messages?.map((msg, idx) => (
-                      <div key={idx} className="mb-1">
-                        [{new Date(msg.timestamp).toLocaleTimeString()}] {msg.userId}: {msg.content}
-                      </div>
-                    ))}
-                  </div>
-                </div>
                 
                 <div className="space-y-4">
                   {messages?.map((msg) => (

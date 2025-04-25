@@ -5,13 +5,13 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 
-const ConceptExplainer = ({ sessionId, userId }) => {
+const ConceptExplainer = ({ sessionId }) => {
   const [query, setQuery] = useState('');
   const [explanation, setExplanation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const explainConcept = useAction(api.aiTutor.explainConcept);
-  const saveAIInteraction = useMutation(api.internal.saveAIInteraction);
+  const saveAIInteraction = useMutation(api.aiTutor.saveAIInteraction);
   const handleExplain = async () => {
     if (!query) return;
 
@@ -21,9 +21,8 @@ const ConceptExplainer = ({ sessionId, userId }) => {
         concept: query,
       });
       setExplanation(response);
-      saveAIInteraction({
+      await saveAIInteraction({
         sessionId: sessionId,
-        userId: userId,
         interactionType: "conceptExplanation",
         content: query,
         response: response,

@@ -1,21 +1,28 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAction } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { toast } from 'sonner';
 
-const AITutorPanel = () => {
+const AITutorPanel = ({ sessionId }) => {
   const [userInput, setUserInput] = useState('');
   const [response, setResponse] = useState('');
-  
-  const askAITutor = useAction(api.aiTutor.ask);
 
+  const askAITutor = useAction(api.aiTutor.ask);
+  const saveAIInteraction = useMutation(api.aiTutor.saveAIInteraction);
   const handleAsk = async () => {
     if (!userInput.trim()) return;
 
     try {
       const result = await askAITutor({ question: userInput });
+      await saveAIInteraction({
+        sessionId: sessionId,
+        interactionType: "ask",
+        content: result,
+        response: response,
+        timestamp: Date.now(),
+      });
       setResponse(result);
       setUserInput('');
     } catch (error) {

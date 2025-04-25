@@ -1,10 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
 import OpenAI from "openai";
-import { api } from "./_generated/api";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "sk-d" 
+  apiKey: process.env.OPENAI_API_KEY || "sk-d"
 });
 
 export const monitorDiscussion = mutation({
@@ -41,7 +40,7 @@ export const ask = action({
     // Get user identity if available
     const identity = await ctx.auth.getUserIdentity();
 
-    if(!identity) {
+    if (!identity) {
       throw new Error("User not authenticated");
     }
 
@@ -53,7 +52,7 @@ export const ask = action({
           content: "You are a helpful AI tutor assisting students with their studies. Provide clear, concise, and educational responses. Use previous conversation context to give more relevant answers."
         }
       ];
-      
+
       // Add chat history if provided
       if (args.chatHistory && args.chatHistory.length > 0) {
         // Filter out the loading message if present and format messages properly
@@ -66,7 +65,7 @@ export const ask = action({
               role: msg.role,
               content: msg.content
             };
-            
+
             // Only add the name field if it's a valid format according to OpenAI's requirements
             // (doesn't contain spaces, <, |, \, /, >)
             if (msg.role === 'user' || msg.role === 'assistant') {
@@ -76,13 +75,13 @@ export const ask = action({
                 formattedMsg.name = sanitizedName;
               }
             }
-            
+
             return formattedMsg;
           });
-        
+
         messages.push(...filteredHistory);
       }
-      
+
       // Add the current question
       messages.push({
         role: "user",
@@ -101,13 +100,42 @@ export const ask = action({
       // Extract the response from the API result
       const response = completion.choices[0]?.message?.content ||
         "I'm sorry, I couldn't process your question. Please try again.";
-      
-      console.log(response)
+
       return response;
     } catch (error) {
       console.error("OpenAI API error:", error);
       return "I'm currently having trouble connecting to my knowledge base. Please try again in a moment.";
     }
+  },
+});
+
+export const saveAIInteraction = mutation({
+  args: {
+    sessionId: v.id("studySessions"),
+    interactionType: v.string(),
+    content: v.string(),
+    response: v.string(),
+    timestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User not authenticated");
+    }
+    const userId = identity.subject;
+    console.log("Saving AI interaction:", args);
+    // Save the interaction to the aiInteractions table
+    const res = await ctx.db.insert("aiInteractions", {
+      sessionId: args.sessionId,
+      userId: userId,
+      //@ts-ignore
+      interactionType: args.interactionType,
+      timestamp: args.timestamp,
+      content: args.content,
+      response: args.response,
+    });
+    console.log("Saved AI interaction:", res);
+    return res;
   },
 });
 
@@ -118,10 +146,10 @@ export const explainConcept = action({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if(!identity) {
+    if (!identity) {
       throw new Error("User not authenticated");
     }
-    
+
     try {
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
@@ -138,10 +166,10 @@ export const explainConcept = action({
         max_tokens: 800,
         temperature: 0.7,
       });
-      
+
       const response = completion.choices[0]?.message?.content ||
         "I'm sorry, I couldn't generate an explanation. Please try again.";
-      
+
       return response;
     } catch (error) {
       console.error("OpenAI API error:", error);
