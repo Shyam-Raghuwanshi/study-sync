@@ -83,4 +83,12 @@ export default defineSchema({
     .index("by_group", ["groupId"])
     .index("by_session", ["sessionId"])
     .index("by_creator", ["createdBy"]),
+  aiInteractions: defineTable({
+    sessionId: v.id("studySessions"),
+    userId: v.string(),
+    interactionType: v.union(v.literal("problemGeneration"), v.literal("feedback"), v.literal("progressAnalysis")),
+    timestamp: v.number(),
+    content: v.string(),
+    response: v.string(),
+  }),
 });

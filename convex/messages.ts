@@ -81,3 +81,12 @@ export const deleteMessage = mutation({
         return true;
     },
 });
+
+// Get a specific message by ID
+export const getMessageById = query({
+  args: { id: v.id("messages") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+ 

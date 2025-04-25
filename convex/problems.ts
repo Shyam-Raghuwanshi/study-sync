@@ -84,7 +84,7 @@ export const recordAttempt = mutation({
     const updatedAttempts = {
       ...userAttempts,
       attempts: userAttempts.attempts + 1,
-      solved: args.solved || userAttempts.solved, // Mark as solved if this attempt was successful
+      solved: args.solved || userAttempts.solved,
       lastAttempt: Date.now(),
     };
     
@@ -98,10 +98,8 @@ export const recordAttempt = mutation({
     
     // If solved, update the user's progress
     if (args.solved && !userAttempts.solved) {
-      // Find the related session and group
       const session = await ctx.db.get(problem.sessionId);
       if (session) {
-        // Find the user's progress record for this group
         const progressRecords = await ctx.db
           .query("progress")
           .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -126,7 +124,7 @@ export const recordAttempt = mutation({
 export const deleteProblem = mutation({
   args: {
     id: v.id("problems"),
-    userId: v.string(), // The user deleting the problem
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     const problem = await ctx.db.get(args.id);
@@ -136,7 +134,6 @@ export const deleteProblem = mutation({
     
     // Check if user is the creator (if not AI-generated)
     if (problem.generatedBy !== "AI" && problem.generatedBy !== args.userId) {
-      // If not creator, check if user is a participant in the session
       const session = await ctx.db.get(problem.sessionId);
       if (!session || !session.participants.includes(args.userId)) {
         throw new Error("Not authorized to delete this problem");
@@ -145,5 +142,31 @@ export const deleteProblem = mutation({
     
     await ctx.db.delete(args.id);
     return true;
+  },
+});
+
+// Generate practice problems
+export const generatePracticeProblems = mutation({
+  args: {
+    sessionId: v.id("studySessions"),
+    topic: v.string(),
+    difficulty: v.number(),
+    count: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const problems = [];
+    for (let i = 0; i < args.count; i++) {
+      const problemId = await ctx.db.insert("problems", {
+        sessionId: args.sessionId,
+        content: `Practice problem on ${args.topic} (Difficulty: ${args.difficulty})`,
+        solution: `Solution for problem on ${args.topic}`,
+        difficulty: args.difficulty,
+        tags: [args.topic],
+        generatedBy: "AI",
+        attempts: {},
+      });
+      problems.push(problemId);
+    }
+    return problems;
   },
 });

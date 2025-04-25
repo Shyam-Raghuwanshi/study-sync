@@ -26,12 +26,13 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import ResourceUpload from '@/components/dashboard/ResourceUpload';
 import { useAuth } from '@clerk/clerk-react';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
 import { Id } from '../../convex/_generated/dataModel';
 import { format } from "date-fns";
 import { WhiteBoard } from '@/components/ui/whiteboard';
+import { AITutorView } from '@/components/dashboard/AITutorView';
 
 interface Message {
   _id: Id<"messages">;
@@ -63,7 +64,8 @@ const SessionRoom = () => {
   const session = useQuery(api.studySessions.get, id ? { id: id as Id<"studySessions"> } : 'skip');
 
   const sendMessage = useMutation(api.messages.send);
- 
+  const askAITutor = useAction(api.aiTutor.ask);
+
   const handleSendMessage = async () => {
     if (!message.trim() || !id || !userId) return;
 
@@ -76,19 +78,45 @@ const SessionRoom = () => {
         isAIGenerated: false
       });
 
+      const userMessage = message.trim();
       setMessage('');
 
-      // If the message mentions the AI tutor, send an AI response
-      if (message.toLowerCase().includes('ai tutor') || message.toLowerCase().includes('@ai')) {
-        // Add a small delay to make it feel more natural
-        setTimeout(async () => {
+      // If the message mentions the AI tutor, get a response from OpenAI
+      if (userMessage.toLowerCase().includes('ai tutor') || userMessage.toLowerCase().includes('@ai')) {
+        // Show loading state for AI
+        await sendMessage({
+          sessionId: id as Id<"studySessions">,
+          userId: 'AI Tutor',
+          content: '...',
+          isAIGenerated: true
+        });
+
+        try {
+          // Get response from OpenAI through our aiTutor API
+          const aiResponse = await askAITutor({
+            question: userMessage.replace(/@ai|ai tutor/gi, '').trim(),
+            sessionId: id as Id<"studySessions">,
+            userId: userId
+          });
+
+          // Update with the actual AI response
           await sendMessage({
             sessionId: id as Id<"studySessions">,
             userId: 'AI Tutor',
-            content: 'I noticed you mentioned me! I can help you understand concepts, solve problems, or create study materials. What would you like help with?',
+            content: aiResponse,
             isAIGenerated: true
           });
-        }, 1000);
+        } catch (aiError) {
+          console.error('Error getting AI response:', aiError);
+          
+          // Send a fallback message if the AI fails
+          await sendMessage({
+            sessionId: id as Id<"studySessions">,
+            userId: 'AI Tutor',
+            content: "I'm having trouble connecting to my knowledge base right now. Please try again in a moment.",
+            isAIGenerated: true
+          });
+        }
       }
     } catch (error) {
       toast.error('Failed to send message');
@@ -395,7 +423,7 @@ const SessionRoom = () => {
                 <p className="text-gray-500 mb-4">
                   Get explanations, generate practice problems, or create study materials with AI assistance.
                 </p>
-                <Button className="bg-tertiary hover:bg-tertiary/90">Ask AI Tutor</Button>
+                <AITutorView />
               </div>
             </TabsContent>
           </Tabs>
