@@ -15,7 +15,26 @@ export const AITutorView = () => {
     if (!userInput.trim()) return;
 
     try {
-      const response = await askAITutor({ question: userInput });
+      // Convert previous responses to chat history format
+      const chatHistory = responses.flatMap(item => [
+        {
+          role: 'user',
+          name: 'You_User', // Format names to meet OpenAI's requirements
+          content: item.question
+        },
+        {
+          role: 'assistant',
+          name: 'AI_Tutor', // Format names to meet OpenAI's requirements
+          content: item.answer
+        }
+      ]);
+      
+      // Send chat history for context
+      const response = await askAITutor({ 
+        question: userInput,
+        chatHistory: chatHistory
+      });
+      
       setResponses((prev) => [...prev, { question: userInput, answer: response }]);
       setUserInput('');
     } catch (error) {
@@ -54,4 +73,3 @@ export const AITutorView = () => {
     </div>
   );
 };
- 

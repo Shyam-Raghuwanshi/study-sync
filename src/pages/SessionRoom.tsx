@@ -92,11 +92,20 @@ const SessionRoom = () => {
         });
 
         try {
+          // Get recent chat history to provide context to the AI
+          const chatHistory = messages ? messages.map(msg => ({
+            role: msg.isAIGenerated ? 'assistant' : 'user',
+            // Make sure the name meets OpenAI's requirements (no spaces or special characters)
+            name: msg.userId.replace(/[\s<|\\/>]+/g, '_'),
+            content: msg.content
+          })).slice(-10).filter(msg => msg.content !== '...') : []; // Get last 10 messages for context
+          
           // Get response from OpenAI through our aiTutor API
           const aiResponse = await askAITutor({
             question: userMessage.replace(/@ai|ai tutor/gi, '').trim(),
             sessionId: id as Id<"studySessions">,
-            userId: userId
+            userId: userId,
+            chatHistory: chatHistory // Send the chat history for context
           });
 
           // Update with the actual AI response

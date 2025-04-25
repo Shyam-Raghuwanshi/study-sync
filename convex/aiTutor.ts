@@ -7,8 +7,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "sk-d" // Replace with your actual API key
 });
 
-console.log("OpenAI client initialized", process.env.OPENAI_API_KEY);
-
 // Monitor discussions and provide feedback
 export const monitorDiscussion = mutation({
   args: {
@@ -31,6 +29,15 @@ export const ask = action({
     question: v.string(),
     sessionId: v.optional(v.id("studySessions")),
     userId: v.optional(v.string()),
+    chatHistory: v.optional(
+      v.array(
+        v.object({
+          role: v.string(),
+          name: v.string(),
+          content: v.string(),
+        })
+      )
+    ),
   },
   handler: async (ctx, args) => {
     // Get user identity if available
@@ -41,20 +48,55 @@ export const ask = action({
     console.log(`Question from ${user}: ${args.question}`);
 
     try {
+      // Prepare messages array with system prompt
+      const messages = [
+        {
+          role: "system",
+          content: "You are a helpful AI tutor assisting students with their studies. Provide clear, concise, and educational responses. Use previous conversation context to give more relevant answers."
+        }
+      ];
+      
+      // Add chat history if provided
+      if (args.chatHistory && args.chatHistory.length > 0) {
+        // Filter out the loading message if present and format messages properly
+        const filteredHistory = args.chatHistory
+          .filter(msg => msg.content !== '...')
+          .map(msg => {
+            // Create a properly formatted message object
+            // OpenAI requires that 'name' must not contain spaces or special characters
+            const formattedMsg = {
+              role: msg.role,
+              content: msg.content
+            };
+            
+            // Only add the name field if it's a valid format according to OpenAI's requirements
+            // (doesn't contain spaces, <, |, \, /, >)
+            if (msg.role === 'user' || msg.role === 'assistant') {
+              const sanitizedName = msg.name.replace(/[\s<|\\/>]+/g, '_');
+              if (sanitizedName) {
+                // @ts-ignore - TypeScript may complain about the dynamic property
+                formattedMsg.name = sanitizedName;
+              }
+            }
+            
+            return formattedMsg;
+          });
+        
+        messages.push(...filteredHistory);
+      }
+      
+      // Add the current question
+      messages.push({
+        role: "user",
+        content: args.question
+      });
+
       // Use OpenAI to generate a response
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo", // You can use different models as needed
-        messages: [
-          {
-            role: "system",
-            content: "You are a helpful AI tutor assisting students with their studies. Provide clear, concise, and educational responses."
-          },
-          {
-            role: "user",
-            content: args.question
-          }
-        ],
-        max_tokens: 500, // Adjust as needed
+        //@ts-ignore
+        messages: messages,
+        max_tokens: 1000, // Adjust as needed
         temperature: 0.7, // Adjust for more or less creative responses
       });
 
