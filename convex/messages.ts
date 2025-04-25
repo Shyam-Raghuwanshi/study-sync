@@ -89,4 +89,26 @@ export const getMessageById = query({
     return await ctx.db.get(args.id);
   },
 });
- 
+
+// Update a message
+export const update = mutation({
+  args: {
+    id: v.id("messages"),
+    content: v.string(),
+    attachments: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.id);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    // Update the message content
+    await ctx.db.patch(args.id, {
+      content: args.content,
+      ...(args.attachments && { attachments: args.attachments }),
+    });
+
+    return true;
+  },
+});

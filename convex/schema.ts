@@ -86,7 +86,7 @@ export default defineSchema({
   aiInteractions: defineTable({
     sessionId: v.id("studySessions"),
     userId: v.string(),
-    interactionType: v.union(v.literal("problemGeneration"), v.literal("feedback"), v.literal("progressAnalysis")),
+    interactionType: v.union(v.literal("problemGeneration"), v.literal("feedback"), v.literal("progressAnalysis"),  v.literal("conceptExplanation")),
     timestamp: v.number(),
     content: v.string(),
     response: v.string(),

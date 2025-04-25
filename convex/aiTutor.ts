@@ -1,13 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
 import OpenAI from "openai";
+import { api } from "./_generated/api";
 
-// Initialize the OpenAI client - in production, use environment variables
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "sk-d" // Replace with your actual API key
+  apiKey: process.env.OPENAI_API_KEY || "sk-d" 
 });
 
-// Monitor discussions and provide feedback
 export const monitorDiscussion = mutation({
   args: {
     sessionId: v.id("studySessions"),
@@ -27,8 +26,6 @@ export const monitorDiscussion = mutation({
 export const ask = action({
   args: {
     question: v.string(),
-    sessionId: v.optional(v.id("studySessions")),
-    userId: v.optional(v.string()),
     chatHistory: v.optional(
       v.array(
         v.object({
@@ -38,14 +35,15 @@ export const ask = action({
         })
       )
     ),
+    interactionType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Get user identity if available
     const identity = await ctx.auth.getUserIdentity();
-    const user = identity?.subject || args.userId || "Anonymous User";
 
-    // Log the question for analytics
-    console.log(`Question from ${user}: ${args.question}`);
+    if(!identity) {
+      throw new Error("User not authenticated");
+    }
 
     try {
       // Prepare messages array with system prompt
@@ -103,23 +101,51 @@ export const ask = action({
       // Extract the response from the API result
       const response = completion.choices[0]?.message?.content ||
         "I'm sorry, I couldn't process your question. Please try again.";
-
-      // Save the interaction in the database if needed using a mutation
-      if (args.sessionId) {
-        // For production, you could store the Q&A history using a mutation
-        // await ctx.runMutation(internal.aiTutor.saveInteraction, {
-        //   sessionId: args.sessionId,
-        //   userId: user,
-        //   question: args.question,
-        //   response: response,
-        //   timestamp: Date.now(),
-        // });
-      }
-
+      
+      console.log(response)
       return response;
     } catch (error) {
       console.error("OpenAI API error:", error);
       return "I'm currently having trouble connecting to my knowledge base. Please try again in a moment.";
+    }
+  },
+});
+
+// Explain a concept to the user
+export const explainConcept = action({
+  args: {
+    concept: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if(!identity) {
+      throw new Error("User not authenticated");
+    }
+    
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are an educational AI tutor. Provide clear, concise explanations of academic concepts."
+          },
+          {
+            role: "user",
+            content: `Explain the concept of ${args.concept} in simple terms.`
+          }
+        ],
+        max_tokens: 800,
+        temperature: 0.7,
+      });
+      
+      const response = completion.choices[0]?.message?.content ||
+        "I'm sorry, I couldn't generate an explanation. Please try again.";
+      
+      return response;
+    } catch (error) {
+      console.error("OpenAI API error:", error);
+      return "I'm currently having trouble generating an explanation. Please try again later.";
     }
   },
 });

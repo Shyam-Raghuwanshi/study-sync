@@ -11,7 +11,7 @@ export const FeedbackProvider = ({ children }) => {
 
   const analyzeResponse = async (userId, problemId, userResponse) => {
     try {
-      const result = await provideFeedback({ userId, problemId, userResponse });
+      const result = await provideFeedback({ userId, problemId, userSolution: userResponse });
       setFeedback((prev) => [...prev, result]);
       toast.success('Feedback provided successfully');
     } catch (error) {

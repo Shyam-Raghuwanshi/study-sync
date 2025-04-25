@@ -32,7 +32,7 @@ import { toast } from 'sonner';
 import { Id } from '../../convex/_generated/dataModel';
 import { format } from "date-fns";
 import { WhiteBoard } from '@/components/ui/whiteboard';
-import { AITutorView } from '@/components/dashboard/AITutorView';
+import AITutorView  from '@/components/dashboard/AITutorView';
 
 interface Message {
   _id: Id<"messages">;
@@ -64,6 +64,7 @@ const SessionRoom = () => {
   const session = useQuery(api.studySessions.get, id ? { id: id as Id<"studySessions"> } : 'skip');
 
   const sendMessage = useMutation(api.messages.send);
+  const updateMessage = useMutation(api.messages.update);
   const askAITutor = useAction(api.aiTutor.ask);
 
   const handleSendMessage = async () => {
@@ -71,12 +72,14 @@ const SessionRoom = () => {
 
     try {
       // Send the user's message
-      await sendMessage({
+      console.log("Sending user message:", message.trim());
+      const userMessageId = await sendMessage({
         sessionId: id as Id<"studySessions">,
         userId: userId,
         content: message.trim(),
         isAIGenerated: false
       });
+      console.log("User message sent, ID:", userMessageId);
 
       const userMessage = message.trim();
       setMessage('');
@@ -84,7 +87,7 @@ const SessionRoom = () => {
       // If the message mentions the AI tutor, get a response from OpenAI
       if (userMessage.toLowerCase().includes('ai tutor') || userMessage.toLowerCase().includes('@ai')) {
         // Show loading state for AI
-        await sendMessage({
+        const loadingMessageResult = await sendMessage({
           sessionId: id as Id<"studySessions">,
           userId: 'AI Tutor',
           content: '...',
@@ -95,26 +98,33 @@ const SessionRoom = () => {
           // Get recent chat history to provide context to the AI
           const chatHistory = messages ? messages.map(msg => ({
             role: msg.isAIGenerated ? 'assistant' : 'user',
-            // Make sure the name meets OpenAI's requirements (no spaces or special characters)
-            name: msg.userId.replace(/[\s<|\\/>]+/g, '_'),
+            name: msg.userId,
             content: msg.content
-          })).slice(-10).filter(msg => msg.content !== '...') : []; // Get last 10 messages for context
+          })).slice(-10) : []; // Get last 10 messages for context
           
           // Get response from OpenAI through our aiTutor API
           const aiResponse = await askAITutor({
             question: userMessage.replace(/@ai|ai tutor/gi, '').trim(),
-            sessionId: id as Id<"studySessions">,
-            userId: userId,
             chatHistory: chatHistory // Send the chat history for context
           });
 
-          // Update with the actual AI response
-          await sendMessage({
-            sessionId: id as Id<"studySessions">,
-            userId: 'AI Tutor',
-            content: aiResponse,
-            isAIGenerated: true
-          });
+          console.log("AI Response received:", aiResponse);
+
+          // Update the loading message with actual response instead of creating a new one
+          if (loadingMessageResult) {
+            await updateMessage({
+              id: loadingMessageResult,
+              content: aiResponse
+            });
+          } else {
+            // Fallback: create a new message if we couldn't get the loading message ID
+            await sendMessage({
+              sessionId: id as Id<"studySessions">,
+              userId: 'AI Tutor',
+              content: aiResponse,
+              isAIGenerated: true
+            });
+          }
         } catch (aiError) {
           console.error('Error getting AI response:', aiError);
           
@@ -148,7 +158,14 @@ const SessionRoom = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
+    
+    // Debug log to see messages being received
+    console.log("Messages updated:", messages?.length, messages);
   }, [messages]);
+  
+  // Debug log every render to see component state
+  console.log("Rendering SessionRoom with messages:", messages?.length);
+
   const getGroupResources = useQuery(api.resources.getByGroup, groupId ? { groupId: groupId as any } : 'skip');
   const getDownloadUrl = useMutation(api.resources.getDownloadUrl);
   const deleteResource = useMutation(api.resources.deleteResource);
@@ -304,6 +321,19 @@ const SessionRoom = () => {
 
             <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
               <div className="container mx-auto max-w-4xl">
+                {/* Debug section - to see if messages are actually coming through */}
+                <div className="mb-8 p-3 bg-gray-100 rounded">
+                  <h4 className="font-bold mb-2">Debug: Raw message data</h4>
+                  <p className="text-xs">Number of messages: {messages?.length || 0}</p>
+                  <div className="text-xs mt-1 max-h-28 overflow-y-auto">
+                    {messages?.map((msg, idx) => (
+                      <div key={idx} className="mb-1">
+                        [{new Date(msg.timestamp).toLocaleTimeString()}] {msg.userId}: {msg.content}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
                 <div className="space-y-4">
                   {messages?.map((msg) => (
                     <div key={msg._id} className="flex items-start space-x-3">
@@ -426,13 +456,13 @@ const SessionRoom = () => {
             </TabsContent>
 
             <TabsContent value="ai-tutor" className="flex-1 flex items-center justify-center p-4">
-              <div className="text-center p-8 max-w-md">
+              <div className="text-center p-8 max-w-2xl">
                 <Sparkles className="h-12 w-12 text-tertiary mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">AI Study Assistant</h3>
                 <p className="text-gray-500 mb-4">
                   Get explanations, generate practice problems, or create study materials with AI assistance.
                 </p>
-                <AITutorView />
+                <AITutorView sessionId={id} />
               </div>
             </TabsContent>
           </Tabs>
