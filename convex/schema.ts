@@ -6,9 +6,20 @@ export default defineSchema({
     attachments: v.optional(v.array(v.string())),
     content: v.string(),
     isAIGenerated: v.boolean(),
-    sessionId: v.id("studySessions"),
+    sessionId: v.optional(v.id("studySessions")),
     timestamp: v.float64(),
     userId: v.string(),
+    groupId: v.optional(v.string()),
+    type: v.optional(v.string()), // "text", "image", "file", "code", "ai-response"
+    attachmentUrl: v.optional(v.string()),
+    attachmentType: v.optional(v.string()),
+    replyToId: v.optional(v.string()),
+    reactions: v.optional(v.array(v.object({
+      userId: v.string(),
+      reaction: v.string()
+    }))),
+    isEdited: v.optional(v.boolean()),
+    threadId: v.optional(v.string()) // For threaded conversations
   }).index("by_session", ["sessionId"]),
   problems: defineTable({
     attempts: v.record(
@@ -91,4 +102,55 @@ export default defineSchema({
     content: v.string(),
     response: v.string(),
   }),
+  
+  // Only adding the thread and typing tables from the chat schema
+  chatThreads: defineTable({
+    parentMessageId: v.string(),
+    sessionId: v.string(),
+    title: v.optional(v.string()),
+    participantIds: v.array(v.string()),
+    lastActivityTimestamp: v.number()
+  }),
+  
+  chatTyping: defineTable({
+    userId: v.string(),
+    sessionId: v.optional(v.string()),
+    groupId: v.optional(v.id("studyGroups")),
+    isTyping: v.boolean(),
+    lastTypingTimestamp: v.number()
+  }).index("by_session", ["sessionId"]).index("by_group", ["groupId"]),
+  
+  // Voice-related tables
+  voiceChannels: defineTable({
+    sessionId: v.id("studySessions"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    createdBy: v.string()
+  }).index("by_session", ["sessionId"]),
+  
+  voiceParticipants: defineTable({
+    channelId: v.id("voiceChannels"),
+    userId: v.string(),
+    joinedAt: v.number(),
+    isMuted: v.boolean(),
+    isDeafened: v.boolean(),
+    isSpeaking: v.boolean(),
+    lastActiveTimestamp: v.number(),
+    deviceInfo: v.object({
+      hasMicrophone: v.boolean(),
+      hasCamera: v.boolean(),
+      hasAudioOutput: v.boolean()
+    })
+  }).index("by_channel", ["channelId"]).index("by_user", ["userId"]),
+  
+  voiceSignaling: defineTable({
+    channelId: v.id("voiceChannels"),
+    fromUserId: v.string(),
+    toUserId: v.string(),
+    type: v.string(), // "offer", "answer", "ice-candidate"
+    payload: v.string(), // JSON stringified signal data
+    timestamp: v.number()
+  }).index("by_channel", ["channelId"])
 });

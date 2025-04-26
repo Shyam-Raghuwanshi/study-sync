@@ -14,10 +14,11 @@ import {
   Trash,
   FileText,
   Download,
-  FileUp,
-  Image,
   File,
-  Trash2
+  Image,
+  Trash2,
+  Volume2,
+  MessageCircle
 } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -42,6 +43,8 @@ import ResourceUpload from '@/components/dashboard/ResourceUpload';
 import { useAuth } from '@clerk/clerk-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
+import { VoiceChannel } from '@/components/ui/voice-channel';
+import { GroupChat } from '@/components/ui/group-chat';
 
 interface ScheduleSessionForm {
   name: string;
@@ -315,11 +318,15 @@ const GroupDetail = () => {
         </Card>
 
         <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 md:w-[600px]">
+          <TabsList className="grid grid-cols-5 md:w-[750px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="communication" className="flex items-center">
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Communication
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
@@ -570,6 +577,52 @@ const GroupDetail = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="communication" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Group Chat</CardTitle>
+                      <CardDescription>
+                        Chat with group members
+                      </CardDescription>
+                    </div>
+                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {id && <GroupChat groupId={id} />}
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Voice Channels</CardTitle>
+                      <CardDescription>
+                        Voice chat with group members
+                      </CardDescription>
+                    </div>
+                    <Volume2 className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {sessions && sessions.length > 0 && (
+                      <VoiceChannel sessionId={sessions[0]._id} />
+                    )}
+                    {(!sessions || sessions.length === 0) && (
+                      <div className="p-4 text-center text-muted-foreground">
+                        <p>No active sessions available for voice chat.</p>
+                        <p className="text-sm mt-2">Schedule a session to use voice channels.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

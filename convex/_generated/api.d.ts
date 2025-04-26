@@ -20,6 +20,7 @@ import type * as resources from "../resources.js";
 import type * as studyAssistant from "../studyAssistant.js";
 import type * as studyGroups from "../studyGroups.js";
 import type * as studySessions from "../studySessions.js";
+import type * as voice from "../voice.js";
 import type * as whiteboards from "../whiteboards.js";
 
 /**
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   studyAssistant: typeof studyAssistant;
   studyGroups: typeof studyGroups;
   studySessions: typeof studySessions;
+  voice: typeof voice;
   whiteboards: typeof whiteboards;
 }>;
 export declare const api: FilterApi<
