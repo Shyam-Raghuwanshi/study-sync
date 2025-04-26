@@ -7,7 +7,17 @@ import { Button } from './button';
 import { useAuth } from '@clerk/clerk-react';
 import { ScrollArea } from './scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
-import { SendIcon, PaperclipIcon, SmileIcon, ImageIcon } from 'lucide-react';
+import { 
+  SendIcon, 
+  PaperclipIcon, 
+  SmileIcon, 
+  FileIcon, 
+  XIcon, 
+  ImageIcon, 
+  FileTextIcon, 
+  FileArchiveIcon, 
+  FilmIcon
+} from 'lucide-react';
 import { Textarea } from './textarea';
 import { Skeleton } from './skeleton';
 import { Badge } from './badge';
@@ -15,10 +25,19 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import EmojiPicker from 'emoji-picker-react';
 import type { EmojiClickData } from 'emoji-picker-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+import ResourceUpload from '../dashboard/ResourceUpload';
 
 interface GroupChatProps {
   groupId: string;
   className?: string;
+}
+
+interface AttachmentInfo {
+  storageId: string;
+  name: string;
+  type: string;
+  file: File;
 }
 
 export function GroupChat({ groupId, className }: GroupChatProps) {
@@ -28,6 +47,7 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [attachmentInfo, setAttachmentInfo] = useState<AttachmentInfo | null>(null);
   
   // Fetch messages for this group
   const messages = useQuery(api.messages.getGroupMessages, { 
@@ -82,18 +102,39 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
     setTypingTimeout(timeout);
   };
   
-  // Send message handler
+  // Handle resource upload completion with enhanced file preview
+  const handleResourceUploaded = (storageId: string, name: string, type: string, file: File) => {
+    setAttachmentInfo({
+      storageId,
+      name,
+      type,
+      file
+    });
+  };
+  
+  // Remove attachment
+  const removeAttachment = () => {
+    setAttachmentInfo(null);
+  };
+  
+  // Send message handler - enhanced to handle attachments
   const handleSendMessage = async () => {
-    if (!message.trim() || !userId) return;
+    if ((!message.trim() && !attachmentInfo) || !userId) return;
     
     try {
+      const content = message.trim() || `Shared a file: ${attachmentInfo?.name}`;
+      
       await sendMessage({
         groupId: groupId as Id<"studyGroups">,
-        content: message.trim(),
-        type: "text"
+        content: content,
+        type: attachmentInfo ? "resource" : "text",
+        attachmentUrl: attachmentInfo ? `convex://${attachmentInfo.storageId}` : undefined,
+        attachmentType: attachmentInfo ? attachmentInfo.type : undefined
       });
       
+      // Reset states
       setMessage('');
+      setAttachmentInfo(null);
       
       // Reset typing status
       setIsTyping(false);
@@ -188,6 +229,103 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
     setIsEmojiPickerOpen(false);
   };
   
+  // Get file icon based on file type
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) {
+      return <ImageIcon className="h-4 w-4" />;
+    } else if (fileType.startsWith('video/')) {
+      return <FilmIcon className="h-4 w-4" />;
+    } else if (fileType.startsWith('text/')) {
+      return <FileTextIcon className="h-4 w-4" />;
+    } else if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('tar')) {
+      return <FileArchiveIcon className="h-4 w-4" />;
+    }
+    return <FileIcon className="h-4 w-4" />;
+  };
+  
+  // Create a preview for the attachment
+  const renderAttachmentPreview = () => {
+    if (!attachmentInfo) return null;
+    
+    const { name, type, file } = attachmentInfo;
+    const isImage = type.startsWith('image/');
+    
+    return (
+      <div className="p-2 border rounded-md mb-2 bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 truncate max-w-[90%]">
+            {getFileIcon(type)}
+            <span className="text-sm font-medium truncate">{name}</span>
+          </div>
+          <button 
+            onClick={removeAttachment}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+        
+        {isImage && (
+          <div className="mt-2 relative">
+            <img 
+              src={URL.createObjectURL(file)} 
+              alt="Preview" 
+              className="rounded-md max-h-32 w-auto"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Enhanced rendering of message content with better previews
+  const renderMessageContent = (msg: any) => {
+    // Check if it's a resource attachment
+    if (msg.type === 'resource' && msg.attachmentUrl) {
+      const isImage = msg.attachmentType?.startsWith('image/');
+      const isVideo = msg.attachmentType?.startsWith('video/');
+      const fileUrl = msg.attachmentUrl.replace('convex://', '/api/resource/');
+      
+      return (
+        <div>
+          <p className="text-sm mb-2">{msg.content}</p>
+          <div className="border rounded-md p-2 bg-muted/30">
+            <div className="flex items-center gap-2 mb-1">
+              {getFileIcon(msg.attachmentType || '')}
+              <span className="text-sm font-medium">{msg.attachmentUrl.split('/').pop()}</span>
+            </div>
+            
+            {isImage && (
+              <div className="mt-1">
+                <img 
+                  src={fileUrl} 
+                  alt="Attachment" 
+                  className="rounded-md max-h-48 w-auto object-contain"
+                  onError={(e) => {
+                    // If image fails to load, hide it
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            
+            <a 
+              href={fileUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-blue-500 hover:underline mt-2 inline-block"
+              download
+            >
+              Download
+            </a>
+          </div>
+        </div>
+      );
+    }
+    
+    return <p className="text-sm">{msg.content}</p>;
+  };
+  
   if (messages === undefined) {
     return (
       <Card className={cn("w-full h-[500px] flex flex-col", className)}>
@@ -264,7 +402,7 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
                             </p>
                           )}
                           
-                          <p className="text-sm">{msg.content}</p>
+                          {renderMessageContent(msg)}
                           
                           <p className="text-xs opacity-70 mt-1 text-right">
                             {formatTime(msg.timestamp)}
@@ -282,11 +420,33 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
         </ScrollArea>
       </CardContent>
       
-      <CardFooter className="p-3 border-t">
+      <CardFooter className="p-3 border-t flex flex-col gap-2">
+        {attachmentInfo && renderAttachmentPreview()}
+        
         <div className="flex w-full items-center gap-2">
-          <button className="text-muted-foreground hover:text-foreground" type="button">
-            <PaperclipIcon className="h-5 w-5" />
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-center">
+                  <ResourceUpload 
+                    groupId={groupId} 
+                    onUploadComplete={handleResourceUploaded}
+                    autoUpload={true}
+                  >
+                    <button 
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground flex items-center justify-center w-5 h-5" 
+                    >
+                      <PaperclipIcon className="h-5 w-5" />
+                    </button>
+                  </ResourceUpload>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Attach a file</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Textarea
             className="flex-1 min-h-9 h-9 resize-none overflow-hidden"
@@ -315,7 +475,7 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
             size="icon" 
             className="h-9 w-9" 
             onClick={handleSendMessage}
-            disabled={!message.trim()}
+            disabled={!message.trim() && !attachmentInfo}
           >
             <SendIcon className="h-4 w-4" />
           </Button>
