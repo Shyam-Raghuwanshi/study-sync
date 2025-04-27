@@ -105,14 +105,14 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
             </Link>
           </div>
 
-          <div className="hidden md:flex flex-1 items-center justify-center px-6 relative">
+          <div className="flex-grow flex items-center justify-center px-6 max-w-4xl w-full">
             {showSearch ? (
-              <div>
+              <div className="w-full min-w-[300px]">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     ref={searchInputRef}
-                    className="pl-10 pr-10 bg-gray-50 focus-visible:ring-primary"
+                    className="pl-10 pr-10 bg-gray-50 focus-visible:ring-primary w-full h-10 rounded-md"
                     placeholder="Search groups by name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -167,7 +167,7 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
             ) : (
               <Button
                 variant="ghost"
-                className="text-gray-500 hover:bg-gray-100"
+                className="text-gray-500 hover:bg-gray-100 w-full max-w-4xl"
                 onClick={() => setShowSearch(true)}
               >
                 <Search className="h-5 w-5 mr-2" />
