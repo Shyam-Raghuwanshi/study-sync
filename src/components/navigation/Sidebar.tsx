@@ -55,7 +55,7 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
   const location = useLocation();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { userId } = useAuth();
-  
+
   const create = useMutation(api.studyGroups.create);
   const allGroups = useQuery(api.studyGroups.getAll, {}) || [];
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(true);
@@ -69,7 +69,7 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
   });
 
   // Filter to show only joined groups where user is a member
-  const userGroups = allGroups.filter(group => 
+  const userGroups = allGroups.filter(group =>
     group.members?.includes(userId)
   );
 
@@ -133,13 +133,7 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
               <ChevronRight className={cn("h-4 w-4 transition-transform", isGroupsExpanded && "rotate-90")} />
               <span className="ml-2">Study Groups</span>
             </button>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                  <PlusCircle className="h-4 w-4 text-primary" />
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+            <CreateGroupDialog form={form} onSubmit={onSubmit} />
           </div>
 
           {isGroupsExpanded && (
@@ -177,92 +171,102 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
         </div>
 
         <div className="px-4 py-4 border-t border-gray-200">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="w-full" size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Study Group
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create Study Group</DialogTitle>
-                <DialogDescription>
-                  Create a new study group to collaborate with others.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter group name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="subject"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Subject</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter subject" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Enter group description" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="isPublic"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>Public Group</FormLabel>
-                          <FormDescription>
-                            Anyone can find and join a public group
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit">Create Group</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center justify-between">
+            <CreateGroupDialog form={form} onSubmit={onSubmit} isText={true} />
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
+function CreateGroupDialog({ form, onSubmit, isText = false }: { form: any, onSubmit: (data: StudyGroupFormData) => void, isText?: boolean }) {
+  return (
+    <>
+      <Dialog>
+        <DialogTrigger asChild>
+          {isText ? <Button className="w-full" size="sm">
+            Create Group
+            <PlusCircle className="mr-2 h-4 w-4" />
+          </Button> : <PlusCircle className="mr-2 h-4 w-4 cursor-pointer" />}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Study Group</DialogTitle>
+            <DialogDescription>
+              Create a new study group to collaborate with others.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter group name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="subject"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter subject" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter group description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isPublic"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Public Group</FormLabel>
+                      <FormDescription>
+                        Anyone can find and join a public group
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit">Create Group</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
 
 export default Sidebar;

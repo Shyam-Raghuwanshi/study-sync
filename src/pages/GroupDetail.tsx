@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -57,6 +57,8 @@ const GroupDetail = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const { userId } = useAuth();
+  const [isUserMember, setIsUserMember] = useState<boolean>(false);
+  const [showJoinDialog, setShowJoinDialog] = useState<boolean>(false);
 
   // Fetch all groups if no id is provided
   const allGroups = useQuery(api.studyGroups.getAll, {});
@@ -84,6 +86,19 @@ const GroupDetail = () => {
       startTime: new Date(),
     },
   });
+
+  // Check if user is a member of the group - MOVED UP before conditional return
+  useEffect(() => {
+    if (members && userId) {
+      const isMember = members.includes(userId);
+      setIsUserMember(isMember);
+
+      // Show join dialog if user is not a member
+      if (!isMember) {
+        setShowJoinDialog(true);
+      }
+    }
+  }, [members, userId]);
 
   const handleScheduleSession = async (data: ScheduleSessionForm) => {
     if (!id || !userId) return;
@@ -128,13 +143,18 @@ const GroupDetail = () => {
       </DashboardLayout>
     );
   }
+
   const handleJoinGroup = async () => {
     if (!id) return;
     try {
       const promise = joinGroup({ groupId: id as any });
       toast.promise(promise, {
         loading: 'Joining group...',
-        success: 'Successfully joined the group!',
+        success: () => {
+          setIsUserMember(true);
+          setShowJoinDialog(false);
+          return 'Successfully joined the group!';
+        },
         error: `Error joining group`,
       });
     } catch (error) {
@@ -179,6 +199,31 @@ const GroupDetail = () => {
   // If id is provided, show group details
   return (
     <DashboardLayout>
+      {/* Join Group Dialog */}
+      <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join {group?.name}</DialogTitle>
+            <DialogDescription>
+              You need to join this study group to participate in discussions, access resources, and attend sessions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              This study group focuses on <strong>{group?.subject}</strong> and has {members?.length || 0} members.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowJoinDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleJoinGroup}>
+              Join Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-start">
           <div>
@@ -268,10 +313,12 @@ const GroupDetail = () => {
               </Form>
             </DialogContent>
           </Dialog>
-          <Button onClick={handleJoinGroup}>
-            <JoystickIcon className="mr-2 h-4 w-4" />
-            Join Group
-          </Button>
+          {!isUserMember && (
+            <Button onClick={handleJoinGroup}>
+              <JoystickIcon className="mr-2 h-4 w-4" />
+              Join Group
+            </Button>
+          )}
         </div>
 
         <Card className="bg-gray-50 border-gray-200">
@@ -319,14 +366,15 @@ const GroupDetail = () => {
 
         <Tabs defaultValue="communication" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-5 md:w-[750px]">
+            <TabsTrigger value="communication" className="flex items-center">
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Chat
+            </TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
-            <TabsTrigger value="communication" className="flex items-center">
-              <MessageCircle className="h-4 w-4 mr-1" />
-              Communication
-            </TabsTrigger>
+
           </TabsList>
           <TabsContent value="communication" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

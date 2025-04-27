@@ -311,6 +311,7 @@ export const sendGroupMessage = mutation({
     // Ensure user is a member of the group
     if (!group.members.includes(userId)) {
       throw new Error("User is not a member of this group");
+      // return false
     }
 
     // Create message
@@ -352,7 +353,8 @@ export const getGroupMessages = query({
 
     // Ensure user is a member of the group
     if (!group.members.includes(userId)) {
-      throw new Error("User is not a member of this group");
+      // throw new Error("User is not a member of this group");
+      return []
     }
 
     let messagesQuery = ctx.db
@@ -468,7 +470,8 @@ export const pinGroupMessage = mutation({
     // Ensure user is a member of the group
     const group: any = await ctx.db.get(message.groupId as any);
     if (!group?.members.includes(userId)) {
-      throw new Error("User is not a member of this group");
+      // throw new Error("User is not a member of this group");
+      return false
     }
 
     // Update pinned status

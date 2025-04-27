@@ -48,12 +48,28 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [attachmentInfo, setAttachmentInfo] = useState<AttachmentInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch messages for this group
   const messages = useQuery(api.messages.getGroupMessages, { 
     groupId: groupId as Id<"studyGroups">,
     limit: 50
   });
+  
+  // Error handling for messages query
+  useEffect(() => {
+    // Check if there's an error in the messages query
+    if (messages === undefined) {
+      // We're still loading, not an error yet
+      setError(null);
+    } else if (messages === null) {
+      // This is an error condition
+      setError("Unable to load messages. You might need to join this group first.");
+    } else {
+      // Messages loaded successfully
+      setError(null);
+    }
+  }, [messages]);
   
   // Debug logging
   useEffect(() => {
@@ -343,6 +359,27 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
         <CardFooter>
           <Skeleton className="h-10 w-full" />
         </CardFooter>
+      </Card>
+    );
+  }
+  
+  // Show error message if there's an error (likely not a member)
+  if (error || messages === null) {
+    return (
+      <Card className={cn("w-full h-[500px] flex flex-col", className)}>
+        <CardHeader>
+          <CardTitle>Group Chat</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col items-center justify-center">
+          <div className="text-center p-6">
+            <p className="text-destructive font-medium mb-2">
+              You need to be a member of this group to view messages
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Join the group using the "Join Group" button at the top of this page.
+            </p>
+          </div>
+        </CardContent>
       </Card>
     );
   }
