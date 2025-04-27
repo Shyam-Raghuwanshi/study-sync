@@ -15,12 +15,20 @@ export const create = mutation({
             throw new Error("User not authenticated");
         }
         const userId = identity.subject;
+        const userName = identity.name || "Unknown User";
+
+        // Create a memberRoles map with the creator as admin
+        const memberRoles: Record<string, string> = {};
+        memberRoles[userId] = "admin";
+
         const studyGroupId = await ctx.db.insert("studyGroups", {
             name: args.name,
             description: args.description,
             subject: args.subject,
             createdBy: userId,
+            createdByName: userName,
             members: [userId],
+            memberRoles: memberRoles as any,
             isPublic: args.isPublic,
             createdAt: Date.now(),
             lastActive: Date.now(),
@@ -39,12 +47,13 @@ export const getAll = query({
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
-            throw new Error("User not authenticated");
+            // throw new Error("User not authenticated");
+            return [];
         }
-        let query:any = ctx.db.query("studyGroups");
+        let query: any = ctx.db.query("studyGroups");
         const userId = identity.subject;
         if (args.subject) {
-            query = query.withIndex("by_subject", (q:any) => q.eq("subject", args.subject),);
+            query = query.withIndex("by_subject", (q: any) => q.eq("subject", args.subject),);
         }
 
         // if (userId) {
@@ -52,7 +61,7 @@ export const getAll = query({
         // }
 
         if (args.onlyPublic) {
-            query = query.filter((q:any) => q.eq(q.field("isPublic"), true));
+            query = query.filter((q: any) => q.eq(q.field("isPublic"), true));
         }
         const groups = await query.collect();
         return groups
@@ -93,7 +102,7 @@ export const getById = query({
 //     },
 // });
 
-// // Join a study group
+// Join a study group
 export const joinGroup = mutation({
     args: {
         groupId: v.id("studyGroups"),
@@ -104,6 +113,7 @@ export const joinGroup = mutation({
             throw new Error("User not authenticated");
         }
         const userId = identity.subject;
+        const userName = identity.name || "Unknown User";
         const group = await ctx.db.get(args.groupId);
         if (!group) {
             throw new Error("Study group not found");
@@ -114,9 +124,15 @@ export const joinGroup = mutation({
             return args.groupId;
         }
 
+        // Initialize memberRoles if it doesn't exist
+        const memberRoles = group.memberRoles || {};
+        // Add the user with member role
+        memberRoles[userId] = "member";
+
         // Add the user to the members array
         await ctx.db.patch(args.groupId, {
             members: [...group.members, userId],
+            memberRoles,
             lastActive: Date.now(),
         });
 
@@ -339,21 +355,172 @@ export const searchByName = query({
         }
 
         let query = ctx.db.query("studyGroups");
-        
+
         // Filter by public status if requested
         if (args.onlyPublic) {
             query = query.filter((q) => q.eq(q.field("isPublic"), true));
         }
-        
+
         // Get all groups then filter by name (Convex doesn't support text search directly in query)
         const allGroups = await query.collect();
-        
+
         // Filter groups whose names include the search term (case insensitive)
         const searchTermLower = args.searchTerm.toLowerCase();
-        const filteredGroups = allGroups.filter(group => 
+        const filteredGroups = allGroups.filter(group =>
             group.name.toLowerCase().includes(searchTermLower)
         );
-        
+
         return filteredGroups;
+    },
+});
+
+// Get user role in group
+export const getUserRole = query({
+    args: {
+        groupId: v.id("studyGroups"),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("User not authenticated");
+        }
+
+        // Use provided userId or current user's id
+        const userId = identity.subject;
+
+        const group = await ctx.db.get(args.groupId);
+        if (!group) {
+            throw new Error("Study group not found");
+        }
+
+        // If memberRoles doesn't exist or user not in roles, check if they're the creator
+        if (!group.memberRoles || !group.memberRoles[userId as any]) {
+            // If user is creator but no role, they are an admin
+            if (group.createdBy === userId) {
+                return "admin";
+            }
+
+            // If user is member but no role, they are a member
+            if (group.members.includes(userId)) {
+                return "member";
+            }
+
+            return null; // Not a member
+        }
+
+        return group.memberRoles[userId];
+    },
+});
+
+// Make user an admin
+export const makeAdmin = mutation({
+    args: {
+        groupId: v.id("studyGroups"),
+        targetUserId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("User not authenticated");
+        }
+        const userId = identity.subject;
+
+        // Get the group
+        const group = await ctx.db.get(args.groupId);
+        if (!group) {
+            throw new Error("Study group not found");
+        }
+
+        // Initialize memberRoles if it doesn't exist
+        const memberRoles = group.memberRoles || {};
+
+        // Check if current user is admin
+        if (memberRoles[userId] !== "admin" && group.createdBy !== userId) {
+            throw new Error("Only admins can make other users admins");
+        }
+
+        // Check if target user is a member
+        if (!group.members.includes(args.targetUserId)) {
+            throw new Error("Target user is not a member of this group");
+        }
+
+        // Update role to admin
+        memberRoles[args.targetUserId] = "admin";
+
+        // Update the group
+        await ctx.db.patch(args.groupId, {
+            memberRoles,
+            lastActive: Date.now(),
+        });
+
+        return args.groupId;
+    },
+});
+
+// Remove admin status
+export const removeAdmin = mutation({
+    args: {
+        groupId: v.id("studyGroups"),
+        targetUserId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("User not authenticated");
+        }
+        const userId = identity.subject;
+
+        // Get the group
+        const group = await ctx.db.get(args.groupId);
+        if (!group) {
+            throw new Error("Study group not found");
+        }
+
+        // Initialize memberRoles if it doesn't exist
+        const memberRoles = group.memberRoles || {};
+
+        // Check if current user is admin
+        if (memberRoles[userId] !== "admin" && group.createdBy !== userId) {
+            throw new Error("Only admins can change roles");
+        }
+
+        // Cannot demote the creator
+        if (group.createdBy === args.targetUserId) {
+            throw new Error("Cannot remove admin status from the group creator");
+        }
+
+        // Update role to member
+        memberRoles[args.targetUserId] = "member";
+
+        // Update the group
+        await ctx.db.patch(args.groupId, {
+            memberRoles,
+            lastActive: Date.now(),
+        });
+
+        return args.groupId;
+    },
+});
+
+// Get members details with roles for a group
+export const getGroupMembersWithRoles = query({
+    args: { groupId: v.id("studyGroups") },
+    handler: async (ctx, args) => {
+        // Get the study group
+        const group = await ctx.db.get(args.groupId);
+        if (!group) {
+            throw new Error("Study group not found");
+        }
+
+        // Get members with their roles
+        const memberRoles = group.memberRoles || {};
+
+        // We'll use Clerk to get user names in the front-end
+        // For now, return member IDs with their roles
+        return group.members.map(memberId => ({
+            userId: memberId,
+            role: memberRoles[memberId] || (group.createdBy === memberId ? "admin" : "member"),
+            isCreator: group.createdBy === memberId
+        }));
     },
 });

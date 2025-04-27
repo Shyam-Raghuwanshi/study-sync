@@ -9,6 +9,7 @@ export default defineSchema({
     sessionId: v.optional(v.id("studySessions")),
     timestamp: v.float64(),
     userId: v.string(),
+    userName: v.optional(v.string()), // Add userName field
     groupId: v.optional(v.string()),
     type: v.optional(v.string()), // "text", "image", "file", "code", "ai-response"
     attachmentUrl: v.optional(v.string()),
@@ -52,10 +53,12 @@ export default defineSchema({
   studyGroups: defineTable({
     createdAt: v.float64(),
     createdBy: v.string(),
+    createdByName: v.string(), // Add the name of the creator
     description: v.string(),
     isPublic: v.boolean(),
     lastActive: v.float64(),
     members: v.array(v.string()),
+    memberRoles: v.record(v.string(), v.union(v.literal("admin"), v.literal("member"))),
     name: v.string(),
     subject: v.string(),
   })
@@ -172,6 +175,7 @@ export default defineSchema({
     isActive: v.boolean(),
     sessionId: v.id("studySessions"),
     creationTime: v.number(),
+    type: v.optional(v.string()),
   }).index("by_session", ["sessionId"]),
   participants: defineTable({
     userId: v.string(),

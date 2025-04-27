@@ -8,6 +8,14 @@ export const getRoom = internalQuery({
   },
 });
 
+
+export const getRoomPublic = query({
+  args: { roomId: v.id("rooms") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.roomId);
+  },
+});
+
 export const createRoom = mutation({
   args: {
     name: v.string(),

@@ -58,7 +58,11 @@ const GroupDetail = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const { userId } = useAuth();
   const [isUserMember, setIsUserMember] = useState<boolean>(false);
+  const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
   const [showJoinDialog, setShowJoinDialog] = useState<boolean>(false);
+  const [showAdminDialog, setShowAdminDialog] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [selectedUserRole, setSelectedUserRole] = useState<string>("member");
 
   // Fetch all groups if no id is provided
   const allGroups = useQuery(api.studyGroups.getAll, {});
@@ -66,6 +70,7 @@ const GroupDetail = () => {
   // Only fetch specific group data if id is present
   const group = id ? useQuery(api.studyGroups.getById, { id: id as any }) : null;
   const sessions = id ? useQuery(api.studyGroups.getGroupSessions, { groupId: id as any }) : null;
+  const membersWithRoles = id ? useQuery(api.studyGroups.getGroupMembersWithRoles, { groupId: id as any }) : null;
   const members = id ? useQuery(api.studyGroups.getGroupMembers, { groupId: id as any }) : null;
   const resources = useQuery(api.studyGroups.getGroupResources, { groupId: id as any })
   const recentActivity = id ? useQuery(api.studyGroups.getRecentActivity, {
@@ -77,6 +82,8 @@ const GroupDetail = () => {
   const getGroupResources = useQuery(api.resources.getByGroup, id ? { groupId: id as any } : 'skip');
   const joinGroup = useMutation(api.studyGroups.joinGroup);
   const createSession = useMutation(api.studySessions.create);
+  const makeAdmin = useMutation(api.studyGroups.makeAdmin);
+  const removeAdmin = useMutation(api.studyGroups.removeAdmin);
   const [isScheduling, setIsScheduling] = useState(false);
 
   const form = useForm<ScheduleSessionForm>({
@@ -87,18 +94,19 @@ const GroupDetail = () => {
     },
   });
 
-  // Check if user is a member of the group - MOVED UP before conditional return
+  // Check if user is a member of the group and get their role
   useEffect(() => {
-    if (members && userId) {
-      const isMember = members.includes(userId);
-      setIsUserMember(isMember);
+    if (membersWithRoles && userId) {
+      const memberInfo = membersWithRoles.find(m => m.userId === userId);
+      setIsUserMember(!!memberInfo);
+      setIsUserAdmin(memberInfo?.role === "admin");
 
       // Show join dialog if user is not a member
-      if (!isMember) {
+      if (!memberInfo) {
         setShowJoinDialog(true);
       }
     }
-  }, [members, userId]);
+  }, [membersWithRoles, userId]);
 
   const handleScheduleSession = async (data: ScheduleSessionForm) => {
     if (!id || !userId) return;
@@ -244,12 +252,14 @@ const GroupDetail = () => {
             <p className="text-gray-500 mt-1">{group.description}</p>
           </div>
           <Dialog open={isScheduling} onOpenChange={setIsScheduling}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Schedule Session
-              </Button>
-            </DialogTrigger>
+            {isUserAdmin && (
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Schedule Session
+                </Button>
+              </DialogTrigger>
+            )}
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Schedule Study Session</DialogTitle>
@@ -348,7 +358,7 @@ const GroupDetail = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created by</p>
-                  <p className="font-medium">{group.createdBy}</p>
+                  <p className="font-medium">{group.createdByName || "Unknown User"}</p>
                 </div>
               </div>
               <div className="flex items-center">
@@ -409,12 +419,6 @@ const GroupDetail = () => {
                   <CardContent>
                     {sessions && sessions.length > 0 && (
                       <VoiceChannel sessionId={sessions[0]._id} />
-                    )}
-                    {(!sessions || sessions.length === 0) && (
-                      <div className="p-4 text-center text-muted-foreground">
-                        <p>No active sessions available for voice chat.</p>
-                        <p className="text-sm mt-2">Schedule a session to use voice channels.</p>
-                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -547,10 +551,12 @@ const GroupDetail = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Study Sessions</CardTitle>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Session
-                  </Button>
+                  {isUserAdmin && (
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      New Session
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -587,18 +593,72 @@ const GroupDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {members.map((memberId, index) => (
-                    <div key={memberId} className="flex items-center space-x-4 p-4 border rounded-md">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback>{memberId.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">Member {index + 1}</p>
-                        <Badge variant="outline" className="mt-1">Member</Badge>
+                  {membersWithRoles?.map((member, index) => {
+                    const isCreator = member.isCreator;
+                    const isAdmin = member.role === "admin";
+                    
+                    return (
+                      <div key={member.userId} className="flex items-center justify-between p-4 border rounded-md">
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarFallback>{member.userId.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">Member {index + 1}</p>
+                            <div className="flex gap-1 mt-1">
+                              {isCreator && (
+                                <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">Creator</Badge>
+                              )}
+                              {isAdmin && (
+                                <Badge variant="secondary">Admin</Badge>
+                              )}
+                              {!isAdmin && (
+                                <Badge variant="outline">Member</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Admin actions - only visible to admins */}
+                        {isUserAdmin && !isCreator && member.userId !== userId && (
+                          <div>
+                            {isAdmin ? (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-500"
+                                onClick={() => {
+                                  removeAdmin({ 
+                                    groupId: id as any,
+                                    targetUserId: member.userId
+                                  })
+                                  .then(() => toast.success("Admin privileges removed"))
+                                  .catch((err) => toast.error("Failed to remove admin: " + err.message));
+                                }}
+                              >
+                                Remove Admin
+                              </Button>
+                            ) : (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  makeAdmin({ 
+                                    groupId: id as any,
+                                    targetUserId: member.userId
+                                  })
+                                  .then(() => toast.success("Admin privileges granted"))
+                                  .catch((err) => toast.error("Failed to make admin: " + err.message));
+                                }}
+                              >
+                                Make Admin
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <Button variant="ghost" size="sm">View Profile</Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

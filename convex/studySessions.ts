@@ -26,6 +26,14 @@ export const create = mutation({
             throw new Error("User is not a member of this group");
         }
 
+        // Check if the user is an admin
+        const memberRoles = group.memberRoles || {};
+        const isAdmin = memberRoles[userId] === "admin" || group.createdBy === userId;
+        
+        if (!isAdmin) {
+            throw new Error("Only group administrators can schedule sessions");
+        }
+
         const startTime = args.startTime || Date.now();
         const currentTime = Date.now();
 
@@ -197,73 +205,74 @@ export const get = query({
 
 // Get participants of a study session
 export const getParticipants = query({
-  args: {
-    sessionId: v.id("studySessions"),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) {
-      throw new Error("Study session not found");
-    }
+    args: {
+        sessionId: v.id("studySessions"),
+    },
+    handler: async (ctx, args) => {
+        const session = await ctx.db.get(args.sessionId);
+        if (!session) {
+            throw new Error("Study session not found");
+        }
 
-    // In a real application, you would fetch user details from your auth service
-    // For now, we're returning a simplified representation with the data we have
-    return session.participants.map(userId => ({
-      id: userId,
-      name: userId, // Ideally replaced with actual user names from auth service
-      active: true, // In a real app, you'd track this with presence
-      avatar: '/placeholder.svg'
-    }));
-  },
+        // In a real application, you would fetch user details from your auth service
+        // For now, we're returning a simplified representation with the data we have
+        return session.participants.map(userId => ({
+            id: userId,
+            name: userId, // Ideally replaced with actual user names from auth service
+            active: true, // In a real app, you'd track this with presence
+            avatar: '/placeholder.svg'
+        }));
+    },
 });
 
 // Get all upcoming sessions for the current user
 export const getUpcomingForUser = query({
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("User not authenticated");
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            //   throw new Error("User not authenticated");
+            return []
+        }
+
+        const userId = identity.subject;
+
+        // Get all groups the user is a member of
+        const userGroups = await ctx.db
+            .query("studyGroups")
+            .withIndex("by_member", (q) => q.eq("members", userId as any))
+            .collect();
+
+        // Get all upcoming sessions for these groups
+        const groupIds = userGroups.map(group => group._id);
+
+        if (groupIds.length === 0) {
+            return [];
+        }
+
+        const sessions = [];
+
+        // For each group, get their sessions
+        for (const groupId of groupIds) {
+            const groupSessions = await ctx.db
+                .query("studySessions")
+                .withIndex("by_group", (q) => q.eq("groupId", groupId))
+                .filter(q => q.eq(q.field("isActive"), true))
+                .collect();
+
+            // Get group information
+            const group = userGroups.find(g => g._id === groupId);
+
+            // Add group name to each session
+            const sessionsWithGroup = groupSessions.map(session => ({
+                ...session,
+                groupName: group?.name || "Study Group",
+                subject: group?.subject || "General"
+            }));
+
+            sessions.push(...sessionsWithGroup);
+        }
+
+        // Sort by start time (soonest first)
+        return sessions.sort((a, b) => a.startTime - b.startTime);
     }
-    
-    const userId = identity.subject;
-    
-    // Get all groups the user is a member of
-    const userGroups = await ctx.db
-      .query("studyGroups")
-      .withIndex("by_member", (q) => q.eq("members", userId as any))
-      .collect();
-      
-    // Get all upcoming sessions for these groups
-    const groupIds = userGroups.map(group => group._id);
-    
-    if (groupIds.length === 0) {
-      return [];
-    }
-    
-    const sessions = [];
-    
-    // For each group, get their sessions
-    for (const groupId of groupIds) {
-      const groupSessions = await ctx.db
-        .query("studySessions")
-        .withIndex("by_group", (q) => q.eq("groupId", groupId))
-        .filter(q => q.eq(q.field("isActive"), true))
-        .collect();
-        
-      // Get group information
-      const group = userGroups.find(g => g._id === groupId);
-      
-      // Add group name to each session
-      const sessionsWithGroup = groupSessions.map(session => ({
-        ...session,
-        groupName: group?.name || "Study Group",
-        subject: group?.subject || "General"
-      }));
-      
-      sessions.push(...sessionsWithGroup);
-    }
-    
-    // Sort by start time (soonest first)
-    return sessions.sort((a, b) => a.startTime - b.startTime);
-  }
 });

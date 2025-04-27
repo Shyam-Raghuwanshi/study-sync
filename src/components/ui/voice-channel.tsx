@@ -6,6 +6,7 @@ import { useVoiceChannel } from '../../hooks/useVoiceChannel';
 import { Id } from '../../../convex/_generated/dataModel';
 import { Mic, MicOff, Headphones, HeadphoneOff, Plus, X, User, Volume2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { VoiceRoom } from '../AudioRoom';
 
 interface VoiceChannelProps {
   sessionId: Id<"studySessions">;
@@ -16,6 +17,7 @@ export function VoiceChannel({ sessionId, className }: VoiceChannelProps) {
   const { userId } = useAuth();
   const [channelName, setChannelName] = useState<string>('');
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [activeRoomId, setActiveRoomId] = useState<Id<"rooms"> | null>(null);
   
   const {
     channels,
@@ -36,10 +38,45 @@ export function VoiceChannel({ sessionId, className }: VoiceChannelProps) {
   const handleCreateChannel = async () => {
     if (!channelName.trim()) return;
     
-    await createChannel(channelName);
+    const result = await createChannel(channelName);
     setChannelName('');
     setIsCreating(false);
+    
+    if (result && typeof result === 'object') {
+      // Ensure result is a room ID before setting it
+      setActiveRoomId(result as unknown as Id<"rooms">);
+    }
   };
+
+  const handleJoinChannel = async (channelId: Id<"voiceChannels">) => {
+    const result = await joinChannel(channelId);
+    if (result && typeof result === 'object') {
+      setActiveRoomId(result as unknown as Id<"rooms">);
+    }
+  };
+
+  const handleLeaveAudioRoom = () => {
+    leaveChannel();
+    setActiveRoomId(null);
+  };
+
+  // If we have an active room ID, show the AudioRoom component
+  if (activeRoomId) {
+    return (
+      <Card className={cn("w-full", className)}>
+        <CardHeader>
+          <CardTitle className="text-md">Voice Channel</CardTitle>
+          <CardDescription>Currently in a voice channel</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <VoiceRoom 
+            roomId={activeRoomId} 
+            onLeave={handleLeaveAudioRoom} 
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={cn("w-full", className)}>
@@ -139,7 +176,7 @@ export function VoiceChannel({ sessionId, className }: VoiceChannelProps) {
                 <div 
                   key={channel._id} 
                   className="flex items-center justify-between p-2 rounded-md hover:bg-accent cursor-pointer"
-                  onClick={() => joinChannel(channel._id)}
+                  onClick={() => handleJoinChannel(channel._id as Id<"voiceChannels">)}
                 >
                   <div>
                     <p className="text-sm font-medium">{channel.name}</p>

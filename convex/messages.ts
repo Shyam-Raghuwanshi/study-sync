@@ -301,6 +301,7 @@ export const sendGroupMessage = mutation({
     if (!identity) throw new Error("Unauthorized");
 
     const userId = identity.subject;
+    const userName = identity.name || "Unknown User";
 
     // Ensure the group exists
     const group = await ctx.db.get(args.groupId);
@@ -318,6 +319,7 @@ export const sendGroupMessage = mutation({
     const messageId = await ctx.db.insert("messages", {
       groupId: args.groupId,
       userId: userId,
+      userName: userName, // Include the user's name
       content: args.content,
       timestamp: Date.now(),
       type: args.type || "text",
