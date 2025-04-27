@@ -5,10 +5,9 @@ import {
 } from "@livekit/components-react";
 import { useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
-export function VideoRoom({ roomId, onLeave }: { roomId: Id<"rooms">, onLeave: () => void }) {
+export function VideoRoom({ roomId, onLeave }: { roomId: any, onLeave: () => void }) {
   const toggleCamera = useMutation(api.rooms.toggleCamera);
   const toggleMic = useMutation(api.rooms.toggleMic);
   const leaveRoom = useMutation(api.rooms.leaveRoom);

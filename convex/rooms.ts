@@ -11,16 +11,32 @@ export const getRoom = internalQuery({
 export const createRoom = mutation({
   args: {
     name: v.string(),
+    sessionId: v.id("studySessions"),
   },
   handler: async (ctx, args) => {
-    const getUserIdentity = await ctx.auth.getUserIdentity();
-    if (!getUserIdentity) throw new Error("Not authenticated");
-    const userId = getUserIdentity.subject as any;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
+    
+    // Check if the user is a participant in the session
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Study session not found");
+    
+    if (!session.participants.includes(userId)) {
+      throw new Error("You are not a participant in this study session");
+    }
+
+    // Get host name from identity
+    const hostName = identity.name || "Unknown";
+
     const roomId = await ctx.db.insert("rooms", {
       name: args.name,
       hostId: userId,
+      hostName, // Store host name directly in the room document
       participants: [userId],
       isActive: true,
+      sessionId: args.sessionId,
+      creationTime: Date.now(),
     });
 
     await ctx.db.insert("participants", {
@@ -48,9 +64,14 @@ export const joinRoom = mutation({
     const room = await ctx.db.get(args.roomId);
     if (!room || !room.isActive) throw new Error("Room not found");
 
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
-
+    // Check if the user is a participant in the session
+    const session = await ctx.db.get(room.sessionId);
+    if (!session) throw new Error("Study session not found");
+    
+    if (!session.participants.includes(userId)) {
+      throw new Error("You are not a participant in this study session");
+    }
+    
     await ctx.db.patch(args.roomId, {
       participants: [...room.participants, userId],
     });
@@ -97,25 +118,36 @@ export const leaveRoom = mutation({
         isActive: false,
       });
     }
+
+    // If no participants left, mark room as inactive
+    if (room.participants.length <= 1) {
+      await ctx.db.patch(args.roomId, {
+        isActive: false,
+      });
+    }
   },
 });
 
 export const listRooms = query({
-  handler: async (ctx) => {
+  args: {
+    sessionId: v.id("studySessions"),
+  },
+  handler: async (ctx, args) => {
+    // Get rooms for the specific session
     const rooms = await ctx.db
       .query("rooms")
+      .withIndex("by_session", q => q.eq("sessionId", args.sessionId))
       .filter(q => q.eq(q.field("isActive"), true))
       .collect();
 
-    return Promise.all(
-      rooms.map(async (room) => {
-        const host = await ctx.db.get(room.hostId as any) as any;
-        return {
-          ...room,
-          hostName: host?.name ?? "Unknown",
-        };
-      })
-    );
+    // Return rooms with additional info but handle hostIds as strings (from auth)
+    return rooms.map((room) => {
+      return {
+        ...room,
+        hostName: room.hostName || "Unknown", // Use existing hostName or default
+        participantsCount: room.participants.length,
+      };
+    });
   },
 });
 
@@ -135,6 +167,7 @@ export const getRoomParticipants = query({
         return {
           ...participant,
           name: user?.name ?? "Unknown",
+          avatar: user?.pictureUrl ?? null,
         };
       })
     );

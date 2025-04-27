@@ -34,19 +34,9 @@ import { Id } from '../../convex/_generated/dataModel';
 import { format } from "date-fns";
 import { WhiteBoard } from '@/components/ui/whiteboard';
 import AITutorView from '@/components/dashboard/AITutorView';
-import ScreenSharing from '@/components/screen-sharing/ScreenSharing';
 import { VideoRoom } from '@/components/VideoRoom';
 import { RoomsList } from '@/components/RoomsList';
-
-interface Message {
-  _id: Id<"messages">;
-  userId: string;
-  content: string;
-  timestamp: number;
-  isAIGenerated: boolean;
-  sessionId: Id<"studySessions">;
-  attachments?: string[];
-}
+import "@livekit/components-styles";
 
 const SessionRoom = () => {
   const { id, groupId } = useParams<{ id: string, groupId: string }>();
@@ -464,15 +454,20 @@ const SessionRoom = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="screen-sharing" className="flex-1 pb-20">
+            <TabsContent value="screen-sharing" className="flex-1">
               {id && (
-                <>
+                <div className="container mx-auto p-6 max-w-5xl">
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-bold mb-2">Screen Sharing</h2>
+                    <p className="text-gray-600">Share your screen or join an existing room to collaborate with others</p>
+                  </div>
+                  
                   {activeRoomId ? (
                     <VideoRoom roomId={activeRoomId} onLeave={() => setActiveRoomId(null)} />
                   ) : (
-                    <RoomsList onJoinRoom={setActiveRoomId} />
+                    <RoomsList onJoinRoom={setActiveRoomId} sessionId={id as Id<"studySessions">} />
                   )}
-                </>
+                </div>
               )}
             </TabsContent>
           </Tabs>

@@ -167,9 +167,12 @@ export default defineSchema({
   rooms: defineTable({
     name: v.string(),
     hostId: v.string(),
+    hostName: v.optional(v.string()), // Add optional hostName field
     participants: v.array(v.string()),
     isActive: v.boolean(),
-  }),
+    sessionId: v.id("studySessions"),
+    creationTime: v.number(),
+  }).index("by_session", ["sessionId"]),
   participants: defineTable({
     userId: v.string(),
     roomId: v.id("rooms"),
