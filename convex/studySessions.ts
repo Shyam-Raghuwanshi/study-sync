@@ -276,3 +276,88 @@ export const getUpcomingForUser = query({
         return sessions.sort((a, b) => a.startTime - b.startTime);
     }
 });
+
+// Delete a study session
+export const deleteSession = mutation({
+    args: {
+        sessionId: v.id("studySessions"),
+        userId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const session = await ctx.db.get(args.sessionId);
+        if (!session) {
+            throw new Error("Study session not found");
+        }
+
+        // Get the study group to check if user is an admin
+        const group = await ctx.db.get(session.groupId);
+        if (!group) {
+            throw new Error("Study group not found");
+        }
+
+        // Check if user is an admin of the group or creator of the session
+        const memberRoles = group.memberRoles || {};
+        const isAdmin = memberRoles[args.userId] === "admin" || 
+                       group.createdBy === args.userId || 
+                       session.createdBy === args.userId;
+        
+        if (!isAdmin) {
+            throw new Error("Only group administrators can delete sessions");
+        }
+
+        // Session must be completed before it can be deleted
+        if (session.isActive && session.status !== 'completed') {
+            throw new Error("Cannot delete an active session. End the session first.");
+        }
+
+        // Delete all related resources
+        
+        // 1. Delete messages associated with the session
+        const messages = await ctx.db
+            .query("messages")
+            .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+            .collect();
+
+        for (const message of messages) {
+            await ctx.db.delete(message._id);
+        }
+
+        // 2. Delete whiteboards associated with the session
+        const whiteboards = await ctx.db
+            .query("whiteboards")
+            .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+            .collect();
+
+        for (const whiteboard of whiteboards) {
+            await ctx.db.delete(whiteboard._id);
+        }
+
+        // 3. Delete resources associated with this specific session
+        const sessionResources = await ctx.db
+            .query("resources")
+            .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+            .collect();
+
+        for (const resource of sessionResources) {
+            await ctx.db.delete(resource._id);
+        }
+
+        // 4. Delete any AI interactions associated with the session
+        const aiInteractions = await ctx.db
+            .query("aiInteractions")
+            .withIndex("by_id", (q) => q.eq("_id", args.sessionId as any))
+            .collect();
+
+        for (const interaction of aiInteractions) {
+            await ctx.db.delete(interaction._id);
+        }
+
+        // Finally, delete the session itself
+        await ctx.db.delete(args.sessionId);
+
+        return {
+            success: true,
+            message: "Session and all associated data deleted successfully"
+        };
+    },
+});

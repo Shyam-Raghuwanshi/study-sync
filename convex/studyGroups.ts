@@ -382,7 +382,8 @@ export const getUserRole = query({
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
-            throw new Error("User not authenticated");
+            // throw new Error("User not authenticated");
+            return null;
         }
 
         // Use provided userId or current user's id

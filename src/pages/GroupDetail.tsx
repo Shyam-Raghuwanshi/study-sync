@@ -308,8 +308,17 @@ const GroupDetail = () => {
                           <Input
                             type="datetime-local"
                             {...field}
-                            value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            value={
+                              field.value
+                                ? new Date(field.value.getTime() - (field.value.getTimezoneOffset() * 60000))
+                                    .toISOString()
+                                    .slice(0, 16)
+                                : ''
+                            }
+                            onChange={(e) => {
+                              const date = new Date(e.target.value);
+                              field.onChange(date);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -438,20 +447,29 @@ const GroupDetail = () => {
                       {sessions
                         .filter(session => session.isActive)
                         .slice(0, 2)
-                        .map(session => (
-                          <SessionCard
-                            key={session._id}
-                            id={session._id}
-                            name={session.name}
-                            groupName={group.name}
-                            groupId={id!}
-                            subject={group.subject}
-                            date={new Date(session.startTime).toLocaleDateString()}
-                            time={new Date(session.startTime).toLocaleTimeString()}
-                            status={session.isActive ? 'upcoming' : 'completed'}
-                            participantCount={session.participants.length}
-                          />
-                        ))
+                        .map(session => {
+                          // Compare session start time with current time
+                          const sessionStartTime = new Date(session.startTime).getTime();
+                          const currentTime = new Date().getTime();
+                          const sessionStatus = session.isActive 
+                            ? (sessionStartTime > currentTime ? 'upcoming' : 'active')
+                            : 'completed';
+                          
+                          return (
+                            <SessionCard
+                              key={session._id}
+                              id={session._id}
+                              name={session.name}
+                              groupName={group.name}
+                              groupId={id!}
+                              subject={group.subject}
+                              date={new Date(session.startTime).toLocaleDateString()}
+                              time={new Date(session.startTime).toLocaleTimeString()}
+                              status={sessionStatus}
+                              participantCount={session.participants.length}
+                            />
+                          );
+                        })
                       }
                     </div>
                   </CardContent>
@@ -561,20 +579,31 @@ const GroupDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {sessions.map(session => (
-                    <SessionCard
-                      key={session._id}
-                      id={session._id}
-                      name={session.name}
-                      groupName={group.name}
-                      groupId={id!}
-                      subject={group.subject}
-                      date={new Date(session.startTime).toLocaleDateString()}
-                      time={new Date(session.startTime).toLocaleTimeString()}
-                      status={session.isActive ? 'upcoming' : 'completed'}
-                      participantCount={session.participants.length}
-                    />
-                  ))}
+                  {sessions.map(session => {
+                    // Compare session start time with current time
+                    const sessionStartTime = new Date(session.startTime).getTime();
+                    const currentTime = new Date().getTime();
+                    const sessionStatus = session.isActive 
+                      ? (sessionStartTime > currentTime ? 'upcoming' : 'active')
+                      : 'completed';
+
+                      console.log({sessionStatus, sessionStartTime, currentTime})
+                    
+                    return (
+                      <SessionCard
+                        key={session._id}
+                        id={session._id}
+                        name={session.name}
+                        groupName={group.name}
+                        groupId={id!}
+                        subject={group.subject}
+                        date={new Date(session.startTime).toLocaleDateString()}
+                        time={new Date(session.startTime).toLocaleTimeString()}
+                        status={sessionStatus}
+                        participantCount={session.participants.length}
+                      />
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

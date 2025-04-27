@@ -40,7 +40,8 @@ export const getBySession = query({
     handler: async (ctx, args) => {
         const user = await ctx.auth.getUserIdentity();
         if (!user) {
-            throw new Error("User not authenticated");
+            // throw new Error("User not authenticated");
+            return [];
         }
         return await ctx.db
             .query("whiteboards")
