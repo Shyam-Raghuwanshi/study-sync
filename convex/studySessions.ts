@@ -194,3 +194,25 @@ export const get = query({
         };
     },
 });
+
+// Get participants of a study session
+export const getParticipants = query({
+  args: {
+    sessionId: v.id("studySessions"),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) {
+      throw new Error("Study session not found");
+    }
+
+    // In a real application, you would fetch user details from your auth service
+    // For now, we're returning a simplified representation with the data we have
+    return session.participants.map(userId => ({
+      id: userId,
+      name: userId, // Ideally replaced with actual user names from auth service
+      active: true, // In a real app, you'd track this with presence
+      avatar: '/placeholder.svg'
+    }));
+  },
+});

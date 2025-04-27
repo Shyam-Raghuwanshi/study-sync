@@ -97,12 +97,12 @@ export default defineSchema({
   aiInteractions: defineTable({
     sessionId: v.id("studySessions"),
     userId: v.string(),
-    interactionType: v.union(v.literal("problemGeneration"), v.literal("feedback"), v.literal("progressAnalysis"),  v.literal("conceptExplanation"),v.literal("ask")),
+    interactionType: v.union(v.literal("problemGeneration"), v.literal("feedback"), v.literal("progressAnalysis"), v.literal("conceptExplanation"), v.literal("ask")),
     timestamp: v.number(),
     content: v.string(),
     response: v.string(),
   }),
-  
+
   // Only adding the thread and typing tables from the chat schema
   chatThreads: defineTable({
     parentMessageId: v.string(),
@@ -111,7 +111,7 @@ export default defineSchema({
     participantIds: v.array(v.string()),
     lastActivityTimestamp: v.number()
   }),
-  
+
   chatTyping: defineTable({
     userId: v.string(),
     sessionId: v.optional(v.string()),
@@ -119,7 +119,7 @@ export default defineSchema({
     isTyping: v.boolean(),
     lastTypingTimestamp: v.number()
   }).index("by_session", ["sessionId"]).index("by_group", ["groupId"]),
-  
+
   // Voice-related tables
   voiceChannels: defineTable({
     sessionId: v.id("studySessions"),
@@ -129,7 +129,7 @@ export default defineSchema({
     createdAt: v.number(),
     createdBy: v.string()
   }).index("by_session", ["sessionId"]),
-  
+
   voiceParticipants: defineTable({
     channelId: v.id("voiceChannels"),
     userId: v.string(),
@@ -144,7 +144,7 @@ export default defineSchema({
       hasAudioOutput: v.boolean()
     })
   }).index("by_channel", ["channelId"]).index("by_user", ["userId"]),
-  
+
   voiceSignaling: defineTable({
     channelId: v.id("voiceChannels"),
     fromUserId: v.string(),
@@ -152,5 +152,29 @@ export default defineSchema({
     type: v.string(), // "offer", "answer", "ice-candidate"
     payload: v.string(), // JSON stringified signal data
     timestamp: v.number()
-  }).index("by_channel", ["channelId"])
+  }).index("by_channel", ["channelId"]),
+
+  // Screen sharing table
+  screenSharing: defineTable({
+    sessionId: v.id("studySessions"),
+    userId: v.string(), // User who is sharing their screen
+    isActive: v.boolean(),
+    startTime: v.number(),
+    endTime: v.optional(v.number()),
+    screenType: v.string(), // "entire_screen", "window", "tab"
+    title: v.optional(v.string()) // Title/name of what's being shared
+  }).index("by_session", ["sessionId"]).index("by_user", ["userId"]),
+  rooms: defineTable({
+    name: v.string(),
+    hostId: v.string(),
+    participants: v.array(v.string()),
+    isActive: v.boolean(),
+  }),
+  participants: defineTable({
+    userId: v.string(),
+    roomId: v.id("rooms"),
+    isHost: v.boolean(),
+    hasCamera: v.boolean(),
+    hasMic: v.boolean(),
+  }).index("by_room", ["roomId"]),
 });

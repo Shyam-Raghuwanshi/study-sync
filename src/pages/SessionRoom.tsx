@@ -15,7 +15,8 @@ import {
   Trash2,
   Loader2,
   File,
-  Image
+  Image,
+  ScreenShare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +33,10 @@ import { toast } from 'sonner';
 import { Id } from '../../convex/_generated/dataModel';
 import { format } from "date-fns";
 import { WhiteBoard } from '@/components/ui/whiteboard';
-import AITutorView  from '@/components/dashboard/AITutorView';
+import AITutorView from '@/components/dashboard/AITutorView';
+import ScreenSharing from '@/components/screen-sharing/ScreenSharing';
+import { VideoRoom } from '@/components/VideoRoom';
+import { RoomsList } from '@/components/RoomsList';
 
 interface Message {
   _id: Id<"messages">;
@@ -50,6 +54,7 @@ const SessionRoom = () => {
   const [showSidebar, setShowSidebar] = useState(true);
   const [message, setMessage] = useState('');
   const { userId } = useAuth();
+  const [activeRoomId, setActiveRoomId] = useState<Id<"rooms"> | null>(null);
 
   // Add joinSession mutation
   const joinSession = useMutation(api.studySessions.joinSession);
@@ -101,7 +106,7 @@ const SessionRoom = () => {
             name: msg.userId,
             content: msg.content
           })).slice(-10) : []; // Get last 10 messages for context
-          
+
           // Get response from OpenAI through our aiTutor API
           const aiResponse = await askAITutor({
             question: userMessage.replace(/@ai|ai tutor/gi, '').trim(),
@@ -127,7 +132,7 @@ const SessionRoom = () => {
           }
         } catch (aiError) {
           console.error('Error getting AI response:', aiError);
-          
+
           // Send a fallback message if the AI fails
           await sendMessage({
             sessionId: id as Id<"studySessions">,
@@ -158,11 +163,11 @@ const SessionRoom = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-    
+
     // Debug log to see messages being received
     console.log("Messages updated:", messages?.length, messages);
   }, [messages]);
-  
+
   // Debug log every render to see component state
   console.log("Rendering SessionRoom with messages:", messages?.length);
 
@@ -303,6 +308,10 @@ const SessionRoom = () => {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Chat
                   </TabsTrigger>
+                  <TabsTrigger value="screen-sharing" className="flex items-center">
+                    <ScreenShare className="h-4 w-4 mr-2" />
+                    Screen Sharing
+                  </TabsTrigger>
                   <TabsTrigger value="document" className="flex items-center">
                     <FileText className="h-4 w-4 mr-2" />
                     Document
@@ -322,7 +331,7 @@ const SessionRoom = () => {
             <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
               <div className="container mx-auto max-w-4xl">
                 {/* Debug section - to see if messages are actually coming through */}
-                
+
                 <div className="space-y-4">
                   {messages?.map((msg) => (
                     <div key={msg._id} className="flex items-start space-x-3">
@@ -453,6 +462,18 @@ const SessionRoom = () => {
                 </p>
                 <AITutorView sessionId={id} />
               </div>
+            </TabsContent>
+
+            <TabsContent value="screen-sharing" className="flex-1 pb-20">
+              {id && (
+                <>
+                  {activeRoomId ? (
+                    <VideoRoom roomId={activeRoomId} onLeave={() => setActiveRoomId(null)} />
+                  ) : (
+                    <RoomsList onJoinRoom={setActiveRoomId} />
+                  )}
+                </>
+              )}
             </TabsContent>
           </Tabs>
         </div>

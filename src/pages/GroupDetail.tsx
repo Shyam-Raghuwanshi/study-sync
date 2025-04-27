@@ -317,7 +317,7 @@ const GroupDetail = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue="communication" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-5 md:w-[750px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
@@ -328,7 +328,51 @@ const GroupDetail = () => {
               Communication
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="communication" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Group Chat</CardTitle>
+                      <CardDescription>
+                        Chat with group members
+                      </CardDescription>
+                    </div>
+                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {id && <GroupChat groupId={id} />}
+                  </CardContent>
+                </Card>
+              </div>
 
+              <div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Voice Channels</CardTitle>
+                      <CardDescription>
+                        Voice chat with group members
+                      </CardDescription>
+                    </div>
+                    <Volume2 className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {sessions && sessions.length > 0 && (
+                      <VoiceChannel sessionId={sessions[0]._id} />
+                    )}
+                    {(!sessions || sessions.length === 0) && (
+                      <div className="p-4 text-center text-muted-foreground">
+                        <p>No active sessions available for voice chat.</p>
+                        <p className="text-sm mt-2">Schedule a session to use voice channels.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
           <TabsContent value="overview" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-6">
@@ -577,52 +621,6 @@ const GroupDetail = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="communication" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle>Group Chat</CardTitle>
-                      <CardDescription>
-                        Chat with group members
-                      </CardDescription>
-                    </div>
-                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    {id && <GroupChat groupId={id} />}
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle>Voice Channels</CardTitle>
-                      <CardDescription>
-                        Voice chat with group members
-                      </CardDescription>
-                    </div>
-                    <Volume2 className="h-5 w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    {sessions && sessions.length > 0 && (
-                      <VoiceChannel sessionId={sessions[0]._id} />
-                    )}
-                    {(!sessions || sessions.length === 0) && (
-                      <div className="p-4 text-center text-muted-foreground">
-                        <p>No active sessions available for voice chat.</p>
-                        <p className="text-sm mt-2">Schedule a session to use voice channels.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

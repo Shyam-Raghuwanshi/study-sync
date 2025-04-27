@@ -72,7 +72,7 @@ export const deleteMessage = mutation({
     if (message.userId !== args.userId) {
       // If not author, check if user is a participant in the session
       const session = await ctx.db.get(message.sessionId as any);
-      if (!session || 'participants' in session && !session.participants.includes(args.userId)) {
+      if (!session || 'participants' in session && !session.participants.includes(args.userId as any)) {
         throw new Error("Not authorized to delete this message");
       }
     }

@@ -313,7 +313,7 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
               href={fileUrl} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-xs text-blue-500 hover:underline mt-2 inline-block"
+              className="text-xs text-white hover:underline mt-2 inline-block"
               download
             >
               Download
