@@ -1,4 +1,3 @@
-
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
@@ -6,61 +5,25 @@ import GroupCard from '@/components/dashboard/GroupCard';
 import SessionCard from '@/components/dashboard/SessionCard';
 import UpcomingSessions from '@/components/dashboard/UpcomingSessions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useConvexAuth } from "convex/react";
+import { useAuth } from "@clerk/clerk-react";
 
 const Dashboard = () => {
-  // Mock data (would come from API in real implementation)
-  const studyGroups = [
-    {
-      id: '1',
-      name: 'Physics 101',
-      description: 'Study group for introductory physics covering mechanics, waves, and thermodynamics.',
-      subject: 'Physics',
-      memberCount: 12,
-      lastActive: '2 hours ago',
-      isNew: false
-    },
-    {
-      id: '2',
-      name: 'Calculus II',
-      description: 'Advanced calculus concepts including integration techniques, series, and vector calculus.',
-      subject: 'Mathematics',
-      memberCount: 8,
-      lastActive: '1 day ago',
-      isNew: true
-    },
-    {
-      id: '3',
-      name: 'Computer Science',
-      description: 'Software engineering principles, data structures, and algorithms.',
-      subject: 'Computer Science',
-      memberCount: 15,
-      lastActive: '3 hours ago',
-      isNew: false
-    }
-  ];
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { userId } = useAuth();
 
-  const upcomingSessions = [
-    {
-      id: '1',
-      name: 'Quantum Mechanics Review',
-      groupName: 'Physics 101',
-      subject: 'Physics',
-      date: 'Today',
-      time: '3:00 PM - 5:00 PM',
-      status: 'upcoming' as const,
-      participantCount: 5
-    },
-    {
-      id: '2',
-      name: 'Calculus Practice',
-      groupName: 'Calculus II',
-      subject: 'Mathematics',
-      date: 'Today',
-      time: '6:00 PM - 7:30 PM',
-      status: 'active' as const,
-      participantCount: 3
-    }
-  ];
+  // Fetch user's study groups from Convex
+  const studyGroups = useQuery(api.studyGroups.getAll, {}) || [];
+
+  // Get user's upcoming sessions
+  const upcomingSessions = useQuery(api.studySessions.getUpcomingForUser) || [];
+
+  // Filter study groups to only show those the user is a member of
+  const userStudyGroups = studyGroups.filter(group =>
+    group.members?.includes(userId)
+  );
 
   return (
     <DashboardLayout>
@@ -84,20 +47,26 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {upcomingSessions.map((session) => (
-                    <SessionCard
-                      groupId=''
-                      key={session.id}
-                      id={session.id}
-                      name={session.name}
-                      groupName={session.groupName}
-                      subject={session.subject}
-                      date={session.date}
-                      time={session.time}
-                      status={session.status}
-                      participantCount={session.participantCount}
-                    />
-                  ))}
+                  {!isLoading && upcomingSessions?.length > 0 ? (
+                    upcomingSessions.map((session) => (
+                      <SessionCard
+                        key={session._id}
+                        id={session._id}
+                        groupId={session.groupId}
+                        name={session.name}
+                        groupName={session.groupName || "Study Group"}
+                        subject={session.subject || "General"}
+                        date={new Date(session.startTime).toLocaleDateString()}
+                        time={`${new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${session.endTime ? new Date(session.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ongoing'}`}
+                        status={session.isActive ? "active" : "upcoming"}
+                        participantCount={session.participants?.length || 0}
+                      />
+                    ))
+                  ) : (
+                    <div className="col-span-2 text-center py-8 text-gray-500">
+                      No upcoming sessions. Join a study group to participate in sessions!
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -111,18 +80,28 @@ const Dashboard = () => {
         <div>
           <h2 className="text-xl font-semibold mb-4">Your Study Groups</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {studyGroups.map((group) => (
-              <GroupCard
-                key={group.id}
-                id={group.id}
-                name={group.name}
-                description={group.description}
-                subject={group.subject}
-                memberCount={group.memberCount}
-                lastActive={group.lastActive}
-                isNew={group.isNew}
-              />
-            ))}
+            {!isLoading && userStudyGroups.length > 0 ? (
+              userStudyGroups.map((group) => (
+                <GroupCard
+                  key={group._id}
+                  id={group._id}
+                  name={group.name}
+                  description={group.description}
+                  subject={group.subject}
+                  memberCount={group.members?.length || 0}
+                  lastActive={group.lastActive ? `${Math.floor((Date.now() - group.lastActive) / (1000 * 60 * 60))} hours ago` : 'Just now'}
+                  isNew={group.createdAt > Date.now() - 7 * 24 * 60 * 60 * 1000}
+                />
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12 border rounded-lg bg-gray-50">
+                <h3 className="font-medium text-lg mb-2">No study groups yet</h3>
+                <p className="text-gray-500 mb-4">Join or create a study group to get started.</p>
+                <Button asChild>
+                  <a href="/all-groups">Browse Groups</a>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

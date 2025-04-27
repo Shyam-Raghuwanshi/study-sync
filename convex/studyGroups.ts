@@ -325,3 +325,35 @@ export const getGroupResources = query({
         return resources;
     },
 });
+
+// Search for study groups by name
+export const searchByName = query({
+    args: {
+        searchTerm: v.string(),
+        onlyPublic: v.optional(v.boolean()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("User not authenticated");
+        }
+
+        let query = ctx.db.query("studyGroups");
+        
+        // Filter by public status if requested
+        if (args.onlyPublic) {
+            query = query.filter((q) => q.eq(q.field("isPublic"), true));
+        }
+        
+        // Get all groups then filter by name (Convex doesn't support text search directly in query)
+        const allGroups = await query.collect();
+        
+        // Filter groups whose names include the search term (case insensitive)
+        const searchTermLower = args.searchTerm.toLowerCase();
+        const filteredGroups = allGroups.filter(group => 
+            group.name.toLowerCase().includes(searchTermLower)
+        );
+        
+        return filteredGroups;
+    },
+});

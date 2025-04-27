@@ -70,32 +70,6 @@ export function VideoRoom({ roomId, onLeave }: { roomId: any, onLeave: () => voi
         <div className="flex-1">
           <VideoConference />
         </div>
-        <div className="p-4 bg-gray-100">
-          <div className="flex justify-center gap-4">
-            <button
-              onClick={handleCameraToggle}
-              className={`px-4 py-2 rounded ${
-                isCameraOn ? "bg-blue-500 text-white" : "bg-gray-300"
-              }`}
-            >
-              {isCameraOn ? "Camera On" : "Camera Off"}
-            </button>
-            <button
-              onClick={handleMicToggle}
-              className={`px-4 py-2 rounded ${
-                isMicOn ? "bg-blue-500 text-white" : "bg-gray-300"
-              }`}
-            >
-              {isMicOn ? "Mic On" : "Mic Off"}
-            </button>
-            <button
-              onClick={handleLeaveRoom}
-              className="px-4 py-2 rounded bg-red-500 text-white"
-            >
-              Leave Room
-            </button>
-          </div>
-        </div>
       </div>
     </LiveKitRoom>
   );

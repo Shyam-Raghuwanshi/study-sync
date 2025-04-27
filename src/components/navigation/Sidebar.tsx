@@ -37,6 +37,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQuery } from 'convex/react';
 import { api } from "../../../convex/_generated/api";
 import { toast } from 'sonner';
+import { useConvexAuth } from "convex/react";
+import { useAuth } from "@clerk/clerk-react";
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -51,8 +53,11 @@ interface StudyGroupFormData {
 
 const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
   const location = useLocation();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { userId } = useAuth();
+  
   const create = useMutation(api.studyGroups.create);
-  const studyGroups = useQuery(api.studyGroups.getAll, {});
+  const allGroups = useQuery(api.studyGroups.getAll, {}) || [];
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(true);
   const form = useForm<StudyGroupFormData>({
     defaultValues: {
@@ -63,11 +68,15 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
     },
   });
 
+  // Filter to show only joined groups where user is a member
+  const userGroups = allGroups.filter(group => 
+    group.members?.includes(userId)
+  );
+
   const onSubmit = (data: StudyGroupFormData) => {
     console.log(data);
 
     const promise = create({ ...data })
-    // TODO: Handle study group creation
     toast.promise(promise, {
       loading: "Creating group...",
       success: () => {
@@ -78,8 +87,6 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
       error: "Failed to create group",
     });
   };
-
-  
 
   const menuItems = [
     { name: 'Dashboard', icon: Home, path: '/dashboard' },
@@ -137,21 +144,27 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
 
           {isGroupsExpanded && (
             <div className="ml-2 space-y-1">
-              {studyGroups?.map((group) => (
-                <Link
-                  key={group._id}
-                  to={`/groups/${group._id}`}
-                  className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                    location.pathname === `/groups/${group._id}`
-                      ? "bg-gray-100 text-primary"
-                      : "text-gray-700 hover:bg-gray-50"
-                  )}
-                >
-                  <Users className="mr-3 h-4 w-4 text-gray-500" />
-                  <span className="truncate">{group.name}</span>
-                </Link>
-              ))}
+              {!isLoading && userGroups.length > 0 ? (
+                userGroups.map((group) => (
+                  <Link
+                    key={group._id}
+                    to={`/groups/${group._id}`}
+                    className={cn(
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                      location.pathname === `/groups/${group._id}`
+                        ? "bg-gray-100 text-primary"
+                        : "text-gray-700 hover:bg-gray-50"
+                    )}
+                  >
+                    <Users className="mr-3 h-4 w-4 text-gray-500" />
+                    <span className="truncate">{group.name}</span>
+                  </Link>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 py-2 px-3">
+                  No groups joined
+                </div>
+              )}
 
               <Link
                 to="/all-groups"

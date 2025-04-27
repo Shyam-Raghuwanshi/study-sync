@@ -216,3 +216,54 @@ export const getParticipants = query({
     }));
   },
 });
+
+// Get all upcoming sessions for the current user
+export const getUpcomingForUser = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User not authenticated");
+    }
+    
+    const userId = identity.subject;
+    
+    // Get all groups the user is a member of
+    const userGroups = await ctx.db
+      .query("studyGroups")
+      .withIndex("by_member", (q) => q.eq("members", userId as any))
+      .collect();
+      
+    // Get all upcoming sessions for these groups
+    const groupIds = userGroups.map(group => group._id);
+    
+    if (groupIds.length === 0) {
+      return [];
+    }
+    
+    const sessions = [];
+    
+    // For each group, get their sessions
+    for (const groupId of groupIds) {
+      const groupSessions = await ctx.db
+        .query("studySessions")
+        .withIndex("by_group", (q) => q.eq("groupId", groupId))
+        .filter(q => q.eq(q.field("isActive"), true))
+        .collect();
+        
+      // Get group information
+      const group = userGroups.find(g => g._id === groupId);
+      
+      // Add group name to each session
+      const sessionsWithGroup = groupSessions.map(session => ({
+        ...session,
+        groupName: group?.name || "Study Group",
+        subject: group?.subject || "General"
+      }));
+      
+      sessions.push(...sessionsWithGroup);
+    }
+    
+    // Sort by start time (soonest first)
+    return sessions.sort((a, b) => a.startTime - b.startTime);
+  }
+});
