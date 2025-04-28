@@ -33,10 +33,6 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-gray-500">Welcome back! Here's what's happening with your study groups.</p>
           </div>
-          <Button>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Get AI Study Plan
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
