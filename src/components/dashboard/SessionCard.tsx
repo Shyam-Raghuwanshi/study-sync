@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Id } from '../../../convex/_generated/dataModel';
+import { useNavigate } from 'react-router-dom';
 
 interface SessionCardProps {
   id: string;
@@ -45,8 +46,10 @@ const SessionCard = ({
   status,
   participantCount
 }: SessionCardProps) => {
+  const navigate = useNavigate();
   const createSessionReminder = useMutation(api.notifications.createSessionReminder);
   const deleteSession = useMutation(api.studySessions.deleteSession);
+  const joinSession = useMutation(api.studySessions.joinSession);
   const { userId } = useAuth();
   const { user } = useUser();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -87,6 +90,27 @@ const SessionCard = ({
     } catch (error) {
       console.error("Error deleting session:", error);
       toast.error("Failed to delete session");
+    }
+  };
+
+  // Handle joining a session
+  const handleJoinSession = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!userId || !id) return;
+    
+    try {
+      // Join the session first to ensure the user is added to participants
+      await joinSession({
+        sessionId: id as Id<"studySessions">,
+        userId: userId
+      });
+      
+      // Then navigate to the session page
+      navigate(`/sessions/${id}/${groupId}`);
+    } catch (error) {
+      console.error("Error joining session:", error);
+      toast.error("Failed to join session");
     }
   };
 
@@ -161,10 +185,11 @@ const SessionCard = ({
               )}
               
               {status === 'active' && (
-                <Button asChild size="sm">
-                  <Link to={`/sessions/${id}/${groupId}`}>
-                    Join Now
-                  </Link>
+                <Button 
+                  size="sm"
+                  onClick={handleJoinSession}
+                >
+                  Join Now
                 </Button>
               )}
               

@@ -229,7 +229,6 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
     return groups.sort((a, b) => a.timestamp - b.timestamp);
   };
 
-  // Render typing indicator if anyone is typing
   const renderTypingIndicator = () => {
     if (!activeTypers || activeTypers.length === 0) return null;
 

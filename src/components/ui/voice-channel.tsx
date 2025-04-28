@@ -43,15 +43,16 @@ export function VoiceChannel({ sessionId, className }: VoiceChannelProps) {
     setIsCreating(false);
     
     if (result && typeof result === 'object') {
-      // Ensure result is a room ID before setting it
-      setActiveRoomId(result as unknown as Id<"rooms">);
+      // Set the room ID returned from creating the channel
+      setActiveRoomId(result as Id<"rooms">);
     }
   };
 
   const handleJoinChannel = async (channelId: Id<"voiceChannels">) => {
     const result = await joinChannel(channelId);
     if (result && typeof result === 'object') {
-      setActiveRoomId(result as unknown as Id<"rooms">);
+      // Set the room ID returned from joining the channel
+      setActiveRoomId(result as Id<"rooms">);
     }
   };
 
@@ -113,7 +114,7 @@ export function VoiceChannel({ sessionId, className }: VoiceChannelProps) {
           </div>
         )}
         
-        {currentChannelId ? (
+        {currentChannelId && !activeRoomId ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">
