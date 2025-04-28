@@ -546,7 +546,7 @@ const GroupDetail = () => {
                             <div>
                               <p className="text-sm font-medium">{resource.name}</p>
                               <p className="text-xs text-gray-500">
-                                Added by {resource.createdBy} on {new Date(resource._creationTime).toLocaleDateString()}
+                                Added by {resource.createdByName} on {new Date(resource._creationTime).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -717,7 +717,7 @@ const GroupDetail = () => {
                             <p className="text-sm text-gray-500">{resource.description}</p>
                           )}
                           <p className="text-xs text-gray-400">
-                            Added by {resource.createdBy} • {new Date(resource._creationTime).toLocaleDateString()}
+                            Added by {resource.createdByName} • {new Date(resource._creationTime).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
