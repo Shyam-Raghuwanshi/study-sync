@@ -86,6 +86,7 @@ export default defineSchema({
     name: v.string(),
     storageId: v.id("_storage"),
     createdBy: v.string(),
+    createdByName: v.string(),
     groupId: v.id("studyGroups"),
     sessionId: v.optional(v.id("studySessions")),
     type: v.string(),

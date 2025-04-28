@@ -28,7 +28,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import ResourceUpload from '@/components/dashboard/ResourceUpload';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, UserButton } from '@clerk/clerk-react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
@@ -369,26 +369,8 @@ const SessionRoom = () => {
               </div>
 
               <div className="flex items-center space-x-3">
-                <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span>{format(new Date(session.startTime), 'yyyy-MM-dd HH:mm:ss')}</span>
-                </div>
-
-                {/* Session Status Badge */}
-                <Badge
-                  className={cn(
-                    "px-2 py-1",
-                    session.status === 'completed' ? "bg-gray-200 text-gray-800" :
-                      session.status === 'active' ? "bg-green-100 text-green-800" :
-                        "bg-blue-100 text-blue-800"
-                  )}
-                >
-                  {session.status === 'completed' ? "Completed" :
-                    session.status === 'active' ? "Live" : "Upcoming"}
-                </Badge>
-
                 {/* End Session Button - Only visible to admins and when session is active */}
-                {isAdmin && session.status === 'active' && (
+                {isAdmin && (
                   <Button
                     variant="destructive"
                     size="sm"
@@ -400,26 +382,8 @@ const SessionRoom = () => {
                   </Button>
                 )}
 
-                {/* Delete Session Button - Only visible to admins when session is completed */}
-                {isAdmin && session.status === 'completed' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteSessionDialog(true)}
-                    className="ml-2 text-red-500 border-red-200 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete Session
-                  </Button>
-                )}
-
                 <div className="flex -space-x-2">
-                  {session.participants.slice(0, 3).map((participant) => (
-                    <Avatar key={participant.id} className="h-8 w-8 border-2 border-white">
-                      <AvatarImage src={participant.avatar} alt={participant.name} />
-                      <AvatarFallback>{participant.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  ))}
+                  <UserButton />
                   {session.participants.length > 3 && (
                     <div className="h-8 w-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs">
                       +{session.participants.length - 3}
@@ -545,70 +509,46 @@ const SessionRoom = () => {
 
               <TabsContent value="document" className="flex-1 flex items-center justify-center p-4">
                 <div className="text-center p-8 max-w-md">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Collaborative Document Editor</h3>
-                  <p className="text-gray-500 mb-4">
-                    This is where you'll work on shared documents in real-time with your study group members.
+                  <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Document Resources</h3>
+                  <p className="text-gray-500 mb-6">
+                    Access all documents and study materials for this session from the Resources panel in the sidebar.
                   </p>
-                  {userId && session.status !== 'completed' && <ResourceUpload
-                    groupId={groupId}
-                    sessionId={id}
-                    onUploadComplete={() => {
-                      // Refresh resources list
-                      // invalidateQuery();
+                  {/* Button to open sidebar on resources tab */}
+                  <Button
+                    onClick={() => {
+                      setShowSidebar(true);
+                      // Find the Resources tab and click it
+                      const tabsElement = document.querySelector('[value="resources"]') as HTMLElement;
+                      if (tabsElement) tabsElement.click();
                     }}
-                  />}
-                  {session.status === 'completed' && (
-                    <div className="p-3 bg-gray-100 rounded-md text-center text-gray-500 mt-4">
-                      <p>This session has ended. Uploading new documents is no longer available.</p>
+                    className="mb-4"
+                  >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    View Resources
+                  </Button>
+
+                  {userId && session.status !== 'completed' && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-500 mb-2">Upload a new document to share with your group:</p>
+                      <ResourceUpload
+                        groupId={groupId}
+                        sessionId={id}
+                        onUploadComplete={() => {
+                          toast.success("Resource uploaded successfully");
+                          setShowSidebar(true);
+                          // Find the Resources tab and click it
+                          const tabsElement = document.querySelector('[value="resources"]') as HTMLElement;
+                          if (tabsElement) tabsElement.click();
+                        }}
+                      />
                     </div>
                   )}
-                </div>
-                <div className="space-y-4">
-                  {getGroupResources?.map((resource) => (
-                    <div
-                      key={resource._id}
-                      className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="bg-primary/10 p-3 rounded">
-                          {getResourceIcon(resource.type)}
-                        </div>
-                        <div>
-                          <p className="font-medium">{resource.name}</p>
-                          {resource.description && (
-                            <p className="text-sm text-gray-500">{resource.description}</p>
-                          )}
-                          <p className="text-xs text-gray-400">
-                            Added by {resource.createdBy} • {new Date(resource._creationTime).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownload(resource._id)}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                        {userId === resource.createdBy && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(resource._id)}
-                            className="text-red-500 hover:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {getGroupResources?.length === 0 && (
-                    <div className="text-center py-6 text-gray-500">
-                      No resources have been uploaded yet.
+
+                  {session.status === 'completed' && (
+                    <div className="p-3 bg-gray-100 rounded-md text-center text-gray-500 mt-4">
+                      <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
+                      <p>This session has ended. Uploading new documents is no longer available.</p>
                     </div>
                   )}
                 </div>
@@ -646,7 +586,7 @@ const SessionRoom = () => {
                         <p className="text-gray-500 mb-6">
                           Join the video room to collaborate with screen sharing and video chat with your study session members.
                         </p>
-                        <Button 
+                        <Button
                           onClick={() => setActiveRoomId(id as any)}
                           className="mx-auto"
                         >
@@ -662,10 +602,24 @@ const SessionRoom = () => {
             </Tabs>
           </div>
 
+          {/* Sidebar toggle button - responsive for all devices */}
+          <Button
+            onClick={toggleSidebar}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "fixed z-[999] rounded-full shadow-md flex items-center justify-center p-2",
+              showSidebar
+                ? "right-[20rem] top-[50%] transform -translate-y-1/2 bg-white"
+                : "right-4 bottom-20 md:right-6 md:top-[50%] md:transform md:-translate-y-1/2"
+            )}
+          >
+            {showSidebar ? <ChevronLeft className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
+          </Button>
+
           {/* Sidebar */}
-          <ChevronLeft onClick={toggleSidebar} className={cn("h-6 w-6 text-black absolute z-[999] top-[50%]", showSidebar ? "right-[20.4rem]" : "right-[1rem]")} />
           <div className={cn(
-            "fixed top-[58px] right-0 bottom-0 w-80 bg-white border-l border-gray-200 overflow-y-auto transition-transform z-20",
+            "fixed top-[58px] right-0 bottom-0 w-full sm:w-80 bg-white border-l border-gray-200 overflow-y-auto transition-transform z-20",
             showSidebar ? "translate-x-0" : "translate-x-full"
           )}>
 
@@ -716,49 +670,75 @@ const SessionRoom = () => {
 
                 <TabsContent value="resources">
                   <div className="space-y-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <div className="bg-primary/10 p-2 rounded">
-                            <FileText className="h-4 w-4 text-primary" />
-                          </div>
-                          <span className="font-medium">Quantum Mechanics Notes</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-3">Uploaded by Alex • PDF • 2.4 MB</p>
-                        <Button size="sm" variant="outline" className="w-full">View</Button>
-                      </CardContent>
-                    </Card>
+                    {userId && session.status !== 'completed' && (
+                      <div>
+                        <ResourceUpload
+                          groupId={groupId}
+                          sessionId={id}
+                          onUploadComplete={() => {
+                            // Refresh resources list after upload
+                            toast.success("Resource uploaded successfully");
+                          }}
+                        />
+                      </div>
+                    )}
 
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <div className="bg-primary/10 p-2 rounded">
-                            <FileText className="h-4 w-4 text-primary" />
-                          </div>
-                          <span className="font-medium">Wave Functions Problems</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-3">Uploaded by Maria • PDF • 1.8 MB</p>
-                        <Button size="sm" variant="outline" className="w-full">View</Button>
-                      </CardContent>
-                    </Card>
+                    {getGroupResources && getGroupResources.length > 0 ? (
+                      getGroupResources.map((resource) => (
+                        <Card key={resource._id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div className="bg-primary/10 p-2 rounded">
+                                {getResourceIcon(resource.type)}
+                              </div>
+                              <span className="font-medium truncate">{resource.name}</span>
+                            </div>
+                            {resource.description && (
+                              <p className="text-xs text-gray-500 mb-2 line-clamp-2">{resource.description}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mb-3">
+                              Added by {resource.createdByName} • {resource.type.split('/')[1]?.toUpperCase() || resource.type}
+                            </p>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => handleDownload(resource._id)}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1" />
+                                View
+                              </Button>
+                              {userId === resource.createdBy && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(resource._id)}
+                                  className="hover:bg-red-50 hover:text-red-500 border-gray-200"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
+                        <FileText className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm">No resources have been uploaded yet.</p>
+                        {session.status !== 'completed' && (
+                          <p className="text-xs mt-1">Upload study materials to share with your group.</p>
+                        )}
+                      </div>
+                    )}
 
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <div className="bg-tertiary/10 p-2 rounded">
-                            <Sparkles className="h-4 w-4 text-tertiary" />
-                          </div>
-                          <span className="font-medium">AI-Generated Practice Exam</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-3">Generated by AI Tutor • PDF • 1.2 MB</p>
-                        <Button size="sm" variant="outline" className="w-full">View</Button>
-                      </CardContent>
-                    </Card>
-
-                    <Button variant="ghost" className="w-full">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Upload Resource
-                    </Button>
+                    {session.status === 'completed' && (
+                      <div className="p-3 bg-gray-100 rounded-md text-center text-gray-500 mt-4">
+                        <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
+                        <p className="text-xs">This session has ended. Uploading new documents is no longer available.</p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>

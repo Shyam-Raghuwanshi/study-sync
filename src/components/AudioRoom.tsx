@@ -8,20 +8,20 @@ import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 
 export function VoiceRoom({ groupId }: { groupId: any }) {
-  const generateToken = useAction(api.livekit.generateToken);
+  const generateTokenForGroup = useAction(api.livekit.generateTokenForGroup);
   const [token, setToken] = useState<string>();
 
   useEffect(() => {
     const setupRoom = async () => {
       try {
-        const token = await generateToken({ groupId });
+        const token = await generateTokenForGroup({ groupId });
         setToken(token);
       } catch (error) {
         toast.error("Failed to join voice room");
       }
     };
     setupRoom();
-  }, [groupId, generateToken]);
+  }, [groupId, generateTokenForGroup]);
 
   if (!token) {
     return <div>Joining room...</div>;

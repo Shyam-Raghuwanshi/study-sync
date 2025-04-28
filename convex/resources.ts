@@ -38,6 +38,7 @@ export const create = mutation({
       name: args.name,
       storageId: args.storageId,
       createdBy: userId,
+      createdByName: user.name || "Unknown",
       groupId: args.groupId,
       sessionId: args.sessionId,
       type: args.type,
