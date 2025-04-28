@@ -23,11 +23,7 @@ if (runOnceWorkflow && config.SETUP_SCRIPT_RAN !== undefined) {
   // The script has already ran once, skip.
   process.exit(0);
 }
-
-const result = spawnSync("npx", ["@convex-dev/auth", "--skip-git-check"], {
-  stdio: "inherit",
-});
-
+ 
 if (runOnceWorkflow) {
   fs.writeFileSync(".env.local", `
 SETUP_SCRIPT_RAN=1
@@ -35,4 +31,4 @@ SETUP_SCRIPT_RAN=1
 }
 
 
-process.exit(result.status);
+process.exit();
