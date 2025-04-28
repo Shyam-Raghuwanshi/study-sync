@@ -26,10 +26,9 @@ export function VoiceRoom({ groupId }: { groupId: any }) {
   if (!token) {
     return <div>Joining room...</div>;
   }
-  console.log(import.meta.env.VITE_LIVEKIT_URL, "-------");
   return (
     <LiveKitRoom
-      serverUrl={import.meta.env.VITE_LIVEKIT_URL}
+      serverUrl={"wss://convex-bas1qcb7.livekit.cloud"}
       token={token}
       connect={true}
     >

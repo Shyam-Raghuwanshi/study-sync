@@ -44,7 +44,7 @@ export function VideoRoom({
 
   return (
     <LiveKitRoom
-      serverUrl={import.meta.env.VITE_LIVEKIT_URL}
+      serverUrl={"wss://convex-bas1qcb7.livekit.cloud"}
       token={token}
       connect={true}
     >
