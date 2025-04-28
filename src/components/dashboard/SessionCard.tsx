@@ -53,7 +53,7 @@ const SessionCard = ({
   const { userId } = useAuth();
   const { user } = useUser();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+
   // Check if user has already set a notification for this session
   const hasNotification = useQuery(
     api.notifications.checkSessionNotification,
@@ -62,7 +62,7 @@ const SessionCard = ({
       sessionId: id as any
     } : 'skip'
   );
-  
+
   // Get user's role in the group to determine if they are an admin
   const userRole = useQuery(
     api.studyGroups.getUserRole,
@@ -70,7 +70,7 @@ const SessionCard = ({
       groupId: groupId as any
     } : 'skip'
   );
-  
+
   // Only regular members (not admins) should see the notification button
   const isAdmin = userRole === "admin";
   const shouldShowNotifyButton = userId && !isAdmin;
@@ -96,16 +96,16 @@ const SessionCard = ({
   // Handle joining a session
   const handleJoinSession = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     if (!userId || !id) return;
-    
+
     try {
       // Join the session first to ensure the user is added to participants
       await joinSession({
         sessionId: id as Id<"studySessions">,
         userId: userId
       });
-      
+
       // Then navigate to the session page
       navigate(`/sessions/${id}/${groupId}`);
     } catch (error) {
@@ -183,16 +183,21 @@ const SessionCard = ({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-              
-              {status === 'active' && (
-                <Button 
+
+              {status === 'active' ? (
+                <Button
                   size="sm"
                   onClick={handleJoinSession}
                 >
                   Join Now
                 </Button>
-              )}
-              
+              ) : <Button
+                size="sm"
+                onClick={handleJoinSession}
+              >
+                View Session
+              </Button>}
+
               {status === 'upcoming' && shouldShowNotifyButton && (
                 <Button
                   size="sm"
@@ -203,7 +208,7 @@ const SessionCard = ({
                     if (userId) {
                       // Get the user email from Clerk using useUser hook
                       const userEmail = user?.primaryEmailAddress?.emailAddress;
-                      
+
                       const promise = createSessionReminder({
                         sessionId: id as any,
                         userId: userId,
@@ -234,7 +239,7 @@ const SessionCard = ({
           </div>
         </CardFooter>
       </Card>
-      
+
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

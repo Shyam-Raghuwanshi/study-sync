@@ -411,7 +411,7 @@ const SessionRoom = () => {
             "flex-1 transition-all",
             showSidebar ? "lg:mr-80" : ""
           )}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
               <div className="bg-white border-b">
                 <div className="container mx-auto px-4">
                   <TabsList className="h-14">
@@ -439,44 +439,54 @@ const SessionRoom = () => {
                 </div>
               </div>
 
-              <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto pb-20" ref={chatContainerRef}>
+              <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
                 <div className="container mx-auto max-w-4xl">
                   <div className="space-y-4">
-                    {messages?.map((msg) => (
-                      <div key={msg._id} className="flex items-start space-x-3">
-                        <Avatar className={cn("h-9 w-9", msg.isAIGenerated && "border-2 border-tertiary")}
-                          style={{
-                            backgroundColor: msg.isAIGenerated ? 'rgb(111, 207, 151)' : userColors[msg.userId] || '#6FCF97'
-                          }}
-                        >
-                          <AvatarFallback style={{
-                            backgroundColor: msg.isAIGenerated ? 'rgb(111, 207, 151)' : userColors[msg.userId] || '#6FCF97',
-                            color: 'white'
-                          }}>
-                            {msg.isAIGenerated ? 'AI' : (userNames[msg.userId] || msg.userId)?.charAt(0)?.toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">
-                              {msg.isAIGenerated ? 'AI Tutor' : (userNames[msg.userId] || `User ${msg.userId.substring(0, 5)}`)}
-                            </span>
-                            {msg.isAIGenerated && (
-                              <Badge variant="outline" className="bg-tertiary/10 text-tertiary border-tertiary/20 text-xs">
-                                AI Tutor
-                              </Badge>
-                            )}
-                            <span className="text-xs text-gray-500">
-                              {new Date(msg.timestamp).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
+                    {messages?.length > 0 ? (
+                      messages.map((msg) => (
+                        <div key={msg._id} className="flex items-start space-x-3">
+                          <Avatar className={cn("h-9 w-9", msg.isAIGenerated && "border-2 border-tertiary")}
+                            style={{
+                              backgroundColor: msg.isAIGenerated ? 'rgb(111, 207, 151)' : userColors[msg.userId] || '#6FCF97'
+                            }}
+                          >
+                            <AvatarFallback style={{
+                              backgroundColor: msg.isAIGenerated ? 'rgb(111, 207, 151)' : userColors[msg.userId] || '#6FCF97',
+                              color: 'white'
+                            }}>
+                              {msg.isAIGenerated ? 'AI' : (userNames[msg.userId] || msg.userId)?.charAt(0)?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">
+                                {msg.isAIGenerated ? 'AI Tutor' : (userNames[msg.userId] || `User ${msg.userId.substring(0, 5)}`)}
+                              </span>
+                              {msg.isAIGenerated && (
+                                <Badge variant="outline" className="bg-tertiary/10 text-tertiary border-tertiary/20 text-xs">
+                                  AI Tutor
+                                </Badge>
+                              )}
+                              <span className="text-xs text-gray-500">
+                                {new Date(msg.timestamp).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-gray-800 whitespace-pre-wrap">{msg.content}</div>
                           </div>
-                          <div className="mt-1 text-gray-800 whitespace-pre-wrap">{msg.content}</div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <MessageSquare className="h-12 w-12 text-gray-300 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-800 mb-2">No messages yet</h3>
+                        <p className="text-gray-500 max-w-sm">
+                          Be the first to send a message in this study session! You can also mention @AI Tutor for help with your studies.
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -571,7 +581,7 @@ const SessionRoom = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="screen-sharing" className="flex-1">
+              <TabsContent value="screen-sharing">
                 {id && (
                   <div className="container mx-auto p-6 max-w-5xl">
                     <div className="mb-4">
@@ -580,7 +590,7 @@ const SessionRoom = () => {
                     </div>
 
                     {!activeRoomId ? (
-                      <div className="text-center p-8">
+                      <div className="text-center px-8">
                         <ScreenShare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-xl font-medium mb-2">Join Video Room</h3>
                         <p className="text-gray-500 mb-6">

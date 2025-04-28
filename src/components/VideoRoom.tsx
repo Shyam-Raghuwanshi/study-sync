@@ -31,10 +31,6 @@ export function VideoRoom({
     setupRoom();
   }, [sessionId, generateToken]);
 
-  const handleLeave = () => {
-    onLeave();
-  };
-
   if (!token) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -51,7 +47,6 @@ export function VideoRoom({
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       token={token}
       connect={true}
-      className="h-screen"
     >
       <VideoConference />
     </LiveKitRoom>
