@@ -677,12 +677,13 @@ const SessionRoom = () => {
                       <div key={participant.id} className="flex items-center space-x-3">
                         <div className="relative">
                           <Avatar>
-                            <AvatarImage src={participant.avatar} alt={participant.name} />
-                            <AvatarFallback>{participant.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback style={{
+                              backgroundColor: userColors[participant.name] || '#6FCF97'
+                            }}>{userNames[participant.name].charAt(0)}</AvatarFallback>
                           </Avatar>
                           <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-tertiary border-2 border-white"></span>
                         </div>
-                        <span className="font-medium">{participant.name}</span>
+                        <span className="font-medium">{userNames[participant.name]}</span>
                       </div>
                     ))}
                   </div>
