@@ -199,13 +199,13 @@ const AITutorView = ({ sessionId }: { sessionId?: string }) => {
                         chatMessages.map(message => (
                           <div
                             key={message.id}
-                            className={`mb-4 p-4 rounded-xl max-w-[85%] ${
+                            className={`mb-4 p-4 rounded-xl max-w-[30%] ${
                               message.role === 'user'
                                 ? 'bg-blue-600 ml-auto text-white'
                                 : 'bg-[#2A2867] mr-auto text-white'
                             }`}
                           >
-                            <div className="text-sm leading-relaxed">
+                            <div className="text-sm leading-relaxed inline-block">
                               {message.content}
                             </div>
                           </div>

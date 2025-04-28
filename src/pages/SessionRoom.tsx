@@ -648,11 +648,11 @@ const SessionRoom = () => {
                           <Avatar>
                             <AvatarFallback style={{
                               backgroundColor: userColors[participant?.name] || '#6FCF97'
-                            }}>{userNames[participant?.name]?.charAt(0)}</AvatarFallback>
+                            }}>{userNames[participant?.name]?.charAt(0) || "Me"}</AvatarFallback>
                           </Avatar>
                           <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-tertiary border-2 border-white"></span>
                         </div>
-                        <span className="font-medium">{userNames[participant?.name]}</span>
+                        <span className="font-medium">{userNames[participant?.name] || "Me"}</span>
                       </div>
                     ))}
                   </div>
