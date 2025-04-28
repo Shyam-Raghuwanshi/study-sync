@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 // Query to get user's notifications
@@ -127,7 +127,7 @@ export const createNotification = internalMutation({
       metadata: args.metadata,
     });
 
-    // If email notifications are enabled, queue an email
+    // If email notifications are enabled, schedule the email sending via internalAction
     if (shouldSendEmail) {
       await ctx.scheduler.runAfter(0, internal.mail.sendNotificationEmail, {
         userId: args.userId,

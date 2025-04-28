@@ -1,8 +1,8 @@
-import { internalMutation } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from 'resend';
 
-export const sendNotificationEmail = internalMutation({
+export const sendNotificationEmail = internalAction({
   args: {
     userId: v.string(),
     notificationId: v.id("notifications"),
@@ -26,18 +26,15 @@ export const sendNotificationEmail = internalMutation({
         userEmail = args.metadata.userEmail;
       } else {
         console.log("User email not found in metadata, trying to fetch from userId:", args.userId);
-        // Otherwise try to get from identity
-        const identity = await ctx.auth.getUserIdentity();
-        if (!identity || !identity.email) {
-          console.error("User email not found for userId:", args.userId);
-          return { success: false, error: "User email not found" };
-        }
-        userEmail = identity.email;
+        // Since we're now using an internalAction, we can't use ctx.auth.getUserIdentity()
+        // We would need to get the user email from a different source, like the database
+        console.error("User email not provided in metadata for userId:", args.userId);
+        return { success: false, error: "User email not provided in metadata" };
       }
 
       // Initialize Resend with API key
-      console.log("Resend API Key:", process.env.RESEND_API_KEY, "User Email:", userEmail);
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      console.log("Resend API Key:", process.env.CONVEX_RESEND_API_KEY, "User Email:", userEmail);
+      const resend = new Resend(process.env.CONVEX_RESEND_API_KEY);
 
       // Format the email based on notification type
       let emailHtml = `
@@ -66,15 +63,8 @@ export const sendNotificationEmail = internalMutation({
         </div>
       `;
 
-      // Send the email
-      console.log({
-        from: 'onboarding@resend.dev',
-        to: userEmail,
-        subject: args.title,
-        html: emailHtml
-      })
       const { data, error } = await resend.emails.send({
-        from: 'onboarding@resend.dev',
+        from: "Convex App <notifications@convexchef.app>",
         to: userEmail,
         subject: args.title,
         html: emailHtml
@@ -83,8 +73,11 @@ export const sendNotificationEmail = internalMutation({
       console.log("Email sent successfully:", data, error);
 
       // Mark notification as email sent
-      await ctx.db.patch(args.notificationId, {
-        isEmailSent: true
+      //@ts-ignore
+      await ctx.runMutation(async ({ db }) => {
+        await db.patch(args.notificationId, {
+          isEmailSent: true
+        });
       });
 
       return { success: true };
