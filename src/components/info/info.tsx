@@ -30,6 +30,10 @@ export function Info() {
                 rectangle, or text tools to start drawing.
               </li>
               <li className="mb-2.5">
+                <strong className="text-primary font-bold">Resize:</strong> Select from cursor Tool, grab the corners of the
+                element to resize.
+              </li>
+              <li className="mb-2.5">
                 <strong className="text-primary font-bold">Draw & Move:</strong> Click and drag on the canvas to
                 draw. Select an element and drag to move.
               </li>

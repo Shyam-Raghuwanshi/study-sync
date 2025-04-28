@@ -206,10 +206,13 @@ export function WhiteBoard() {
   };
 
   const getMouseCoordinates = (event: MouseEvent) => {
-    const clientX =
-      (event.clientX - panOffset.x * scale + scaleOffset.x) / scale;
-    const clientY =
-      (event.clientY - panOffset.y * scale + scaleOffset.y) / scale;
+    const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    
+    // Get the actual position relative to the canvas
+    const clientX = (event.clientX - rect.left - panOffset.x * scale + scaleOffset.x) / scale;
+    const clientY = (event.clientY - rect.top - panOffset.y * scale + scaleOffset.y) / scale;
+    
     return { clientX, clientY };
   };
 
@@ -415,7 +418,7 @@ export function WhiteBoard() {
   };
 
   return (
-    <div>
+    <div style={{ position: "relative" }}>
       <Info />
       <ActionBar tool={tool} setTool={setTool} />
       <ControlPanel
@@ -431,21 +434,23 @@ export function WhiteBoard() {
           onBlur={handleBlur}
           className="textArea"
           style={{
+            position: "absolute",
             top: selectedElement
               ? (selectedElement.y1 - 2) * scale +
-              panOffset.y * scale -
-              scaleOffset.y
+                panOffset.y * scale -
+                scaleOffset.y
               : 0,
             left: selectedElement
               ? selectedElement.x1 * scale + panOffset.x * scale - scaleOffset.x
               : 0,
             font: `${24 * scale}px sans-serif`,
+            zIndex: 2
           }}
         />
       ) : null}
       <canvas
         id="canvas"
-        width={800}
+        width={1000}
         height={500}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

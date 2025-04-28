@@ -571,14 +571,7 @@ const SessionRoom = () => {
               </TabsContent>
 
               <TabsContent value="ai-tutor" className="flex-1 flex items-center justify-center p-4">
-                <div className="text-center p-8 max-w-2xl">
-                  <Sparkles className="h-12 w-12 text-tertiary mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">AI Study Assistant</h3>
-                  <p className="text-gray-500 mb-4">
-                    Get explanations, generate practice problems, or create study materials with AI assistance.
-                  </p>
-                  <AITutorView sessionId={id} />
-                </div>
+                <AITutorView sessionId={id} />
               </TabsContent>
 
               <TabsContent value="screen-sharing">

@@ -104,7 +104,8 @@ export const create = action({
         return functionArgs.questions || [];
       } catch (error) {
         console.error("Error parsing function arguments:", error);
-        throw new Error("Failed to parse generated MCQs");
+        // throw new Error("Failed to parse generated MCQs");
+        return [];
       }
     } catch (error) {
       console.error("OpenAI API error:", error);

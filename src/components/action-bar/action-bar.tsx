@@ -11,7 +11,7 @@ type ActionBarProps = {
 
 export function ActionBar({ tool, setTool }: ActionBarProps) {
   return (
-    <div className="fixed top-[70px] z-2 p-2.5 bg-[var(--primary-bg-color)] left-1/2 flex gap-5 justify-center transform -translate-x-1/2 border border-[var(--border-color)] rounded-[10px] shadow-md">
+    <div className="fixed bottom-[70px] z-2 p-2.5 bg-[var(--primary-bg-color)] left-1/2 flex gap-5 justify-center transform -translate-x-1/2 border border-[var(--border-color)] rounded-[10px] shadow-md">
       {Object.values(Tools).map((t, index) => (
         <div
           className={`relative cursor-pointer rounded-md border border-transparent p-2.5 bg-[var(--primary-bg-color)] transition-colors duration-300 hover:bg-[var(--secondary-bg-color)] ${
