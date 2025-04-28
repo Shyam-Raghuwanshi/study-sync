@@ -18,7 +18,8 @@ import {
   Image,
   Trash2,
   Volume2,
-  MessageCircle
+  MessageCircle,
+  Bell
 } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -84,6 +85,7 @@ const GroupDetail = () => {
   const createSession = useMutation(api.studySessions.create);
   const makeAdmin = useMutation(api.studyGroups.makeAdmin);
   const removeAdmin = useMutation(api.studyGroups.removeAdmin);
+  const createSessionReminder = useMutation(api.notifications.createSessionReminder);
   const [isScheduling, setIsScheduling] = useState(false);
 
   const form = useForm<ScheduleSessionForm>({
@@ -311,8 +313,8 @@ const GroupDetail = () => {
                             value={
                               field.value
                                 ? new Date(field.value.getTime() - (field.value.getTimezoneOffset() * 60000))
-                                    .toISOString()
-                                    .slice(0, 16)
+                                  .toISOString()
+                                  .slice(0, 16)
                                 : ''
                             }
                             onChange={(e) => {
@@ -383,13 +385,13 @@ const GroupDetail = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="communication" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-5 md:w-[750px]">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="communication" className="flex items-center">
               <MessageCircle className="h-4 w-4 mr-1" />
               Chat
             </TabsTrigger>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -451,10 +453,10 @@ const GroupDetail = () => {
                           // Compare session start time with current time
                           const sessionStartTime = new Date(session.startTime).getTime();
                           const currentTime = new Date().getTime();
-                          const sessionStatus = session.isActive 
+                          const sessionStatus = session.isActive
                             ? (sessionStartTime > currentTime ? 'upcoming' : 'active')
                             : 'completed';
-                          
+
                           return (
                             <SessionCard
                               key={session._id}
@@ -583,12 +585,11 @@ const GroupDetail = () => {
                     // Compare session start time with current time
                     const sessionStartTime = new Date(session.startTime).getTime();
                     const currentTime = new Date().getTime();
-                    const sessionStatus = session.isActive 
+                    const sessionStatus = session.isActive
                       ? (sessionStartTime > currentTime ? 'upcoming' : 'active')
                       : 'completed';
 
-                      console.log({sessionStatus, sessionStartTime, currentTime})
-                    
+
                     return (
                       <SessionCard
                         key={session._id}
@@ -625,7 +626,7 @@ const GroupDetail = () => {
                   {membersWithRoles?.map((member, index) => {
                     const isCreator = member.isCreator;
                     const isAdmin = member.role === "admin";
-                    
+
                     return (
                       <div key={member.userId} className="flex items-center justify-between p-4 border rounded-md">
                         <div className="flex items-center space-x-4">
@@ -647,37 +648,37 @@ const GroupDetail = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Admin actions - only visible to admins */}
                         {isUserAdmin && !isCreator && member.userId !== userId && (
                           <div>
                             {isAdmin ? (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="text-red-500"
                                 onClick={() => {
-                                  removeAdmin({ 
+                                  removeAdmin({
                                     groupId: id as any,
                                     targetUserId: member.userId
                                   })
-                                  .then(() => toast.success("Admin privileges removed"))
-                                  .catch((err) => toast.error("Failed to remove admin: " + err.message));
+                                    .then(() => toast.success("Admin privileges removed"))
+                                    .catch((err) => toast.error("Failed to remove admin: " + err.message));
                                 }}
                               >
                                 Remove Admin
                               </Button>
                             ) : (
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  makeAdmin({ 
+                                  makeAdmin({
                                     groupId: id as any,
                                     targetUserId: member.userId
                                   })
-                                  .then(() => toast.success("Admin privileges granted"))
-                                  .catch((err) => toast.error("Failed to make admin: " + err.message));
+                                    .then(() => toast.success("Admin privileges granted"))
+                                    .catch((err) => toast.error("Failed to make admin: " + err.message));
                                 }}
                               >
                                 Make Admin

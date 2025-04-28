@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import UserProfile from '../user-profile';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { NotificationMenu } from '@/components/ui/notification-menu';
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -177,6 +178,7 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
           </div>
 
           <div className="flex items-center">
+            <NotificationMenu />
             <UserProfile />
           </div>
         </div>

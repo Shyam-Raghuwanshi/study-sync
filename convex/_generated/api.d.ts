@@ -15,7 +15,9 @@ import type {
 } from "convex/server";
 import type * as aiTutor from "../aiTutor.js";
 import type * as livekit from "../livekit.js";
+import type * as mail from "../mail.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
 import type * as problems from "../problems.js";
 import type * as resources from "../resources.js";
 import type * as rooms from "../rooms.js";
@@ -37,7 +39,9 @@ import type * as whiteboards from "../whiteboards.js";
 declare const fullApi: ApiFromModules<{
   aiTutor: typeof aiTutor;
   livekit: typeof livekit;
+  mail: typeof mail;
   messages: typeof messages;
+  notifications: typeof notifications;
   problems: typeof problems;
   resources: typeof resources;
   rooms: typeof rooms;

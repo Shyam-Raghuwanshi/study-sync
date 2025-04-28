@@ -184,4 +184,39 @@ export default defineSchema({
     hasCamera: v.boolean(),
     hasMic: v.boolean(),
   }).index("by_room", ["roomId"]),
+  
+  // Notifications table
+  notifications: defineTable({
+    userId: v.string(),
+    sessionId: v.optional(v.id("studySessions")),
+    groupId: v.optional(v.id("studyGroups")),
+    type: v.string(), // "session_reminder", "group_update", "resource_added", etc.
+    title: v.string(),
+    message: v.string(),
+    isRead: v.boolean(),
+    isEmailSent: v.boolean(),
+    createdAt: v.number(),
+    metadata: v.optional(v.object({
+      sessionStartTime: v.optional(v.number()),
+      resourceId: v.optional(v.string()),
+      actorId: v.optional(v.string()),
+      actorName: v.optional(v.string()),
+      userEmail: v.optional(v.string()), // Added userEmail field for email notifications
+    })),
+  })
+    .index("by_user", ["userId"])
+    .index("by_read_status", ["userId", "isRead"])
+    .index("by_session", ["sessionId"])
+    .index("by_group", ["groupId"]),
+    
+  // User notification preferences
+  notificationPreferences: defineTable({
+    userId: v.string(),
+    emailNotifications: v.boolean(),
+    webNotifications: v.boolean(),
+    sessionReminders: v.boolean(),
+    groupUpdates: v.boolean(),
+    resourceAdditions: v.boolean(),
+    lastUpdated: v.number(),
+  }).index("by_user", ["userId"]),
 });

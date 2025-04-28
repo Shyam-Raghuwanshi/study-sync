@@ -306,9 +306,9 @@ export const deleteSession = mutation({
         }
 
         // Session must be completed before it can be deleted
-        if (session.isActive && session.status !== 'completed') {
-            throw new Error("Cannot delete an active session. End the session first.");
-        }
+        // if (session.isActive && session.status !== 'completed') {
+        //     throw new Error("Cannot delete an active session. End the session first.");
+        // }
 
         // Delete all related resources
         
