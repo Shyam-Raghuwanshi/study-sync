@@ -425,7 +425,7 @@ const GroupDetail = () => {
                   </CardHeader>
                   <CardContent>
                     {sessions && sessions.length > 0 && (
-                      <VoiceChannel sessionId={sessions[0]._id} />
+                      <VoiceChannel groupId={id} />
                     )}
                   </CardContent>
                 </Card>

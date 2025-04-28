@@ -3,19 +3,19 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { AccessToken } from "livekit-server-sdk";
-import { internal } from "./_generated/api";
 
 export const generateToken = action({
   args: {
-    roomId: v.id("rooms"),
+    groupId: v.id("studyGroups"),
   },
   handler: async (ctx, args): Promise<string> => {
     const getUserIdentity = await ctx.auth.getUserIdentity();
     if (!getUserIdentity) throw new Error("Not authenticated");
     const userId = getUserIdentity.subject as any;
-    const userName = getUserIdentity.name;
-    const room = await ctx.runQuery(internal.rooms.getRoom, { roomId: args.roomId });
-    if (!room) throw new Error("Room not found");
+    const userName = getUserIdentity.name; 
+
+    // Use the group ID as the room name
+    const roomName = `group_${args.groupId}`;
 
     const token = new AccessToken(
       process.env.LIVEKIT_API_KEY!,
@@ -26,9 +26,9 @@ export const generateToken = action({
       }
     );
 
-    token.addGrant({
-      room: room.name,
+    token.addGrant({ 
       roomJoin: true,
+      room: roomName,  // Set the room name based on group ID
       canPublish: true,
       canSubscribe: true,
     });
