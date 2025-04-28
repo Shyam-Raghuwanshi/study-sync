@@ -104,22 +104,8 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
     >
       <div className="h-full flex flex-col">
         <div className="px-4 py-6">
-          <div className="flex flex-col space-y-1">
-            {menuItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={cn(
-                  "flex items-center px-2 py-2 text-sm font-medium rounded-md",
-                  location.pathname === item.path
-                    ? "bg-primary text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                <item.icon className={cn("mr-3 h-5 w-5", location.pathname === item.path ? "text-white" : "text-gray-500")} />
-                {item.name}
-              </Link>
-            ))}
+          <div className="flex flex-col space-y-1 items-start">
+            <span className="text-primary font-bold text-xl">StudySync</span>
           </div>
         </div>
 

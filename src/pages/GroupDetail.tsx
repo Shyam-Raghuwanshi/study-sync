@@ -55,15 +55,10 @@ interface ScheduleSessionForm {
 
 const GroupDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
   const { userId } = useAuth();
   const [isUserMember, setIsUserMember] = useState<boolean>(false);
   const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
   const [showJoinDialog, setShowJoinDialog] = useState<boolean>(false);
-  const [showAdminDialog, setShowAdminDialog] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<string>("");
-  const [selectedUserRole, setSelectedUserRole] = useState<string>("member");
 
   // Fetch all groups if no id is provided
   const allGroups = useQuery(api.studyGroups.getAll, {});
@@ -95,6 +90,7 @@ const GroupDetail = () => {
       startTime: new Date(),
     },
   });
+
 
   // Check if user is a member of the group and get their role
   useEffect(() => {
@@ -385,7 +381,7 @@ const GroupDetail = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue="overview" className="w-full" >
           <TabsList className="grid grid-cols-5 md:w-[750px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="communication" className="flex items-center">
@@ -572,7 +568,7 @@ const GroupDetail = () => {
                 <div className="flex justify-between items-center">
                   <CardTitle>Study Sessions</CardTitle>
                   {isUserAdmin && (
-                    <Button>
+                    <Button onClick={() => setIsScheduling(true)}>
                       <Plus className="mr-2 h-4 w-4" />
                       New Session
                     </Button>
@@ -615,10 +611,6 @@ const GroupDetail = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Group Members</CardTitle>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Invite Member
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
