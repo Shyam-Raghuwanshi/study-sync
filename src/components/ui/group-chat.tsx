@@ -85,6 +85,22 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
   const sendMessage = useMutation(api.messages.sendGroupMessage);
   const setTypingStatus = useMutation(api.messages.setGroupTypingStatus);
 
+  // Create a mapping of userIds to names from messages
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  
+  // Update userNames map when messages change
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      const newUserNames: Record<string, string> = {};
+      messages.forEach(msg => {
+        if (msg.userId && msg.userName) {
+          newUserNames[msg.userId] = msg.userName;
+        }
+      });
+      setUserNames(prev => ({...prev, ...newUserNames}));
+    }
+  }, [messages]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (scrollAreaRef.current && messages && messages.length > 0) {
@@ -217,7 +233,7 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
   const renderTypingIndicator = () => {
     if (!activeTypers || activeTypers.length === 0) return null;
 
-    const names = activeTypers.map(typer => typer.userId).join(', ');
+    const names = activeTypers.map(typer => userNames[typer.userId] || `User ${typer.userId.substring(0, 5)}`).join(', ');
 
     return (
       <div className="text-xs text-muted-foreground italic px-2 py-1">
