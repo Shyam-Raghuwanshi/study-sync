@@ -64,7 +64,7 @@ export const sendNotificationEmail = internalAction({
       `;
 
       const { data, error } = await resend.emails.send({
-        from: "Convex App <notifications@convexchef.app>",
+        from: "onboarding@resend.dev",
         to: userEmail,
         subject: args.title,
         html: emailHtml
