@@ -6,7 +6,7 @@ import { AccessToken } from "livekit-server-sdk";
 
 export const generateToken = action({
   args: {
-    groupId: v.id("studyGroups"),
+    sessionId: v.id("studySessions"),
   },
   handler: async (ctx, args): Promise<string> => {
     const getUserIdentity = await ctx.auth.getUserIdentity();
@@ -14,8 +14,8 @@ export const generateToken = action({
     const userId = getUserIdentity.subject as any;
     const userName = getUserIdentity.name; 
 
-    // Use the group ID as the room name
-    const roomName = `group_${args.groupId}`;
+    // Use the session ID as the room name
+    const roomName = `session_${args.sessionId}`;
 
     const token = new AccessToken(
       process.env.LIVEKIT_API_KEY!,
@@ -28,7 +28,7 @@ export const generateToken = action({
 
     token.addGrant({ 
       roomJoin: true,
-      room: roomName,  // Set the room name based on group ID
+      room: roomName,  // Set the room name based on session ID
       canPublish: true,
       canSubscribe: true,
     });

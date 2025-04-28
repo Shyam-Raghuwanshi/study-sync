@@ -475,7 +475,7 @@ const SessionRoom = () => {
                 </div>
               </div>
 
-              <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
+              <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto pb-20" ref={chatContainerRef}>
                 <div className="container mx-auto max-w-4xl">
                   <div className="space-y-4">
                     {messages?.map((msg) => (
@@ -517,9 +517,9 @@ const SessionRoom = () => {
                 </div>
               </TabsContent>
 
-              {/* Chat input (only on chat tab) */}
+              {/* Chat input (only on chat tab) - Fixed at bottom */}
               {activeTab === 'chat' && (
-                <div className="bg-white border-t p-4">
+                <div className="bg-white border-t p-4 fixed bottom-0 left-0 right-0 z-10" style={{ width: showSidebar ? 'calc(100% - 20rem)' : '100%' }}>
                   <div className="container mx-auto max-w-4xl">
                     {session.status === 'completed' ? (
                       <div className="p-3 bg-gray-100 rounded-md text-center text-gray-500">
@@ -636,13 +636,25 @@ const SessionRoom = () => {
                   <div className="container mx-auto p-6 max-w-5xl">
                     <div className="mb-4">
                       <h2 className="text-2xl font-bold mb-2">Screen Sharing</h2>
-                      <p className="text-gray-600">Share your screen or join an existing room to collaborate with others</p>
+                      <p className="text-gray-600">Collaborate with others through screen sharing and video chat</p>
                     </div>
 
-                    {activeRoomId ? (
-                      <VideoRoom roomId={activeRoomId} onLeave={() => setActiveRoomId(null)} />
+                    {!activeRoomId ? (
+                      <div className="text-center p-8">
+                        <ScreenShare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-xl font-medium mb-2">Join Video Room</h3>
+                        <p className="text-gray-500 mb-6">
+                          Join the video room to collaborate with screen sharing and video chat with your study session members.
+                        </p>
+                        <Button 
+                          onClick={() => setActiveRoomId(id as any)}
+                          className="mx-auto"
+                        >
+                          Join Video Room
+                        </Button>
+                      </div>
                     ) : (
-                      <RoomsList onJoinRoom={setActiveRoomId} sessionId={id as Id<"studySessions">} />
+                      <VideoRoom sessionId={id as Id<"studySessions">} onLeave={() => setActiveRoomId(null)} />
                     )}
                   </div>
                 )}
@@ -678,12 +690,12 @@ const SessionRoom = () => {
                         <div className="relative">
                           <Avatar>
                             <AvatarFallback style={{
-                              backgroundColor: userColors[participant.name] || '#6FCF97'
-                            }}>{userNames[participant.name].charAt(0)}</AvatarFallback>
+                              backgroundColor: userColors[participant?.name] || '#6FCF97'
+                            }}>{userNames[participant?.name]?.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-tertiary border-2 border-white"></span>
                         </div>
-                        <span className="font-medium">{userNames[participant.name]}</span>
+                        <span className="font-medium">{userNames[participant?.name]}</span>
                       </div>
                     ))}
                   </div>
