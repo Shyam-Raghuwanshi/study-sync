@@ -248,7 +248,11 @@ const ProblemGenerator = ({ sessionId, userId }) => {
                         }`}>
                         {String.fromCharCode(65 + optIndex)}
                       </div>
-                      <div className="text-white">{option.substring(3)}</div>
+                      <div className="text-white">
+                        {option.includes(': ') ? option.split(': ')[1] : 
+                         option.includes('. ') ? option.split('. ')[1] : 
+                         option}
+                      </div>
                     </div>
                   </button>
                 ))}
