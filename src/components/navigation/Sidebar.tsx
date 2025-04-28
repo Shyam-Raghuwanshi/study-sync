@@ -74,7 +74,6 @@ const Sidebar = ({ isSidebarOpen }: SidebarProps) => {
   );
 
   const onSubmit = (data: StudyGroupFormData) => {
-    console.log(data);
 
     const promise = create({ ...data })
     toast.promise(promise, {

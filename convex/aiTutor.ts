@@ -16,7 +16,6 @@ export const monitorDiscussion = mutation({
     // Logic to monitor discussions and provide feedback
     // This could involve analyzing the message content and providing suggestions
     // For now, we will just log the message
-    console.log(`User ${args.userId} in session ${args.sessionId}: ${args.message}`);
     return true;
   },
 });
@@ -123,7 +122,6 @@ export const saveAIInteraction = mutation({
       throw new Error("User not authenticated");
     }
     const userId = identity.subject;
-    console.log("Saving AI interaction:", args);
     // Save the interaction to the aiInteractions table
     const res = await ctx.db.insert("aiInteractions", {
       sessionId: args.sessionId,
@@ -134,7 +132,6 @@ export const saveAIInteraction = mutation({
       content: args.content,
       response: args.response,
     });
-    console.log("Saved AI interaction:", res);
     return res;
   },
 });

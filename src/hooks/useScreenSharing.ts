@@ -212,7 +212,6 @@ export function useScreenSharing({ sessionId }: UseScreenSharingProps) {
 
     // For viewer: handle incoming stream
     peerConnection.ontrack = (event) => {
-      console.log("Track received from peer:", event.streams);
       
       // Create a new MediaStream from the received tracks
       const remoteStream = new MediaStream();
@@ -223,7 +222,6 @@ export function useScreenSharing({ sessionId }: UseScreenSharingProps) {
       // Signal that we have a stream to display
       const videoElement = document.getElementById('remote-screen') as HTMLVideoElement;
       if (videoElement) {
-        console.log("Setting remote stream to video element");
         videoElement.srcObject = remoteStream;
         videoElement.play().catch(err => console.error("Error playing video:", err));
       } else {
@@ -331,9 +329,7 @@ export function useScreenSharing({ sessionId }: UseScreenSharingProps) {
       return;
     }
     
-    try {
-      console.log(`Connecting to viewer: ${viewerId}`);
-      
+    try {      
       // Create a new connection for this viewer
       const peerConnection = createPeerConnection(viewerId);
       
@@ -358,7 +354,6 @@ export function useScreenSharing({ sessionId }: UseScreenSharingProps) {
         }
       }));
       
-      console.log(`Connection offer sent to viewer: ${viewerId}`);
     } catch (error) {
       console.error("Error connecting to viewer:", error);
     }

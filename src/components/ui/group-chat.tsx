@@ -71,11 +71,6 @@ export function GroupChat({ groupId, className }: GroupChatProps) {
     }
   }, [messages]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("GroupChat messages:", messages);
-  }, [messages]);
-
   // Fetch active typers
   const activeTypers = useQuery(api.messages.getGroupActiveTypers, {
     groupId: groupId as Id<"studyGroups">

@@ -112,7 +112,6 @@ export const createNotification = internalMutation({
     // Default to sending notifications if preferences don't exist
     const shouldSendWeb = preferences ? preferences.webNotifications : true;
     const shouldSendEmail = preferences ? preferences.emailNotifications : true;
-    console.log("Notification preferences:", shouldSendEmail, preferences)
     // Create notification record
     const notificationId = await ctx.db.insert("notifications", {
       userId: args.userId,

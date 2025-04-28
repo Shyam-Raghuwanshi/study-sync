@@ -49,6 +49,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useUser } from '@clerk/clerk-react';
+
+// Function to generate consistent color from a user ID
+const getUserColor = (userId: string) => {
+  // Generate a random but consistent color based on user ID
+  const hash = Array.from(userId).reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+
+  const h = Math.abs(hash % 360);
+  const s = 70 + (hash % 20); // 70-90% saturation
+  const l = 60 + (hash % 15); // 60-75% lightness
+
+  return `hsl(${h}, ${s}%, ${l}%)`;
+};
 
 const SessionRoom = () => {
   const { id, groupId } = useParams<{ id: string, groupId: string }>();
@@ -57,10 +72,13 @@ const SessionRoom = () => {
   const [showSidebar, setShowSidebar] = useState(true);
   const [message, setMessage] = useState('');
   const { userId } = useAuth();
+  const { user } = useUser();
   const [activeRoomId, setActiveRoomId] = useState<Id<"rooms"> | null>(null);
   const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
   const [showDeleteSessionDialog, setShowDeleteSessionDialog] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [userColors, setUserColors] = useState<Record<string, string>>({});
 
   // Add joinSession mutation
   const joinSession = useMutation(api.studySessions.joinSession);
@@ -78,6 +96,40 @@ const SessionRoom = () => {
     limit: 50
   } : 'skip');
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Track user information and populate colors map
+  useEffect(() => {
+    if (messages) {
+      // Create a color for each unique userId in messages
+      const newColors: Record<string, string> = {};
+      const newUserNames: Record<string, string> = {};
+
+      messages.forEach(msg => {
+        // Skip AI messages
+        if (msg.isAIGenerated) return;
+
+        // Generate color for this user if we don't have one yet
+        if (!userColors[msg.userId]) {
+          newColors[msg.userId] = getUserColor(msg.userId);
+        }
+
+        // Try to get a username for this user ID
+        if (!userNames[msg.userId]) {
+          // For the current user, use their name from Clerk
+          newUserNames[msg.userId] = msg.userName;
+        }
+      });
+
+      // If current user isn't in messages yet, add them anyway
+      if (userId && !userColors[userId]) {
+        newColors[userId] = getUserColor(userId);
+      }
+
+      // Update state with new colors and usernames
+      setUserColors(prev => ({ ...prev, ...newColors }));
+      setUserNames(prev => ({ ...prev, ...newUserNames }));
+    }
+  }, [messages, userId, user?.fullName]);
 
   // Get session details
   const session = useQuery(api.studySessions.get, id ? { id: id as Id<"studySessions"> } : 'skip');
@@ -115,7 +167,7 @@ const SessionRoom = () => {
           // Get recent chat history to provide context to the AI
           const chatHistory = messages ? messages.map(msg => ({
             role: msg.isAIGenerated ? 'assistant' : 'user',
-            name: msg.userId,
+            name: msg.userName,
             content: msg.content
           })).slice(-10) : []; // Get last 10 messages for context
 
@@ -425,17 +477,26 @@ const SessionRoom = () => {
 
               <TabsContent value="chat" className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
                 <div className="container mx-auto max-w-4xl">
-                  {/* Debug section - to see if messages are actually coming through */}
-
                   <div className="space-y-4">
                     {messages?.map((msg) => (
                       <div key={msg._id} className="flex items-start space-x-3">
-                        <Avatar className={cn("h-9 w-9", msg.isAIGenerated && "border-2 border-tertiary")}>
-                          <AvatarFallback>{msg.userId[0]?.toUpperCase()}</AvatarFallback>
+                        <Avatar className={cn("h-9 w-9", msg.isAIGenerated && "border-2 border-tertiary")}
+                          style={{
+                            backgroundColor: msg.isAIGenerated ? 'rgb(111, 207, 151)' : userColors[msg.userId] || '#6FCF97'
+                          }}
+                        >
+                          <AvatarFallback style={{
+                            backgroundColor: msg.isAIGenerated ? 'rgb(111, 207, 151)' : userColors[msg.userId] || '#6FCF97',
+                            color: 'white'
+                          }}>
+                            {msg.isAIGenerated ? 'AI' : (userNames[msg.userId] || msg.userId)?.charAt(0)?.toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium">{msg.userId}</span>
+                            <span className="font-medium">
+                              {msg.isAIGenerated ? 'AI Tutor' : (userNames[msg.userId] || `User ${msg.userId.substring(0, 5)}`)}
+                            </span>
                             {msg.isAIGenerated && (
                               <Badge variant="outline" className="bg-tertiary/10 text-tertiary border-tertiary/20 text-xs">
                                 AI Tutor

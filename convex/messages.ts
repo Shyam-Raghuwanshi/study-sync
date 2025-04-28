@@ -11,6 +11,7 @@ export const send = mutation({
   },
   handler: async (ctx, args) => {
     // Ensure the session exists
+    const identity = await ctx.auth.getUserIdentity();
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
       throw new Error("Study session not found");
@@ -25,6 +26,7 @@ export const send = mutation({
       sessionId: args.sessionId,
       userId: args.userId,
       content: args.content,
+      userName: identity?.name || "Unknown User",
       timestamp: Date.now(),
       attachments: args.attachments || [],
       isAIGenerated: args.isAIGenerated || false,
@@ -155,6 +157,7 @@ export const sendMessage = mutation({
       threadId: args.threadId,
       attachmentUrl: args.attachmentUrl,
       attachmentType: args.attachmentType,
+      userName: identity.name || "Unknown User",
       reactions: [],
       isEdited: false,
       isAIGenerated: false,

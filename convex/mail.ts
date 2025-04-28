@@ -25,7 +25,6 @@ export const sendNotificationEmail = internalAction({
       if (args.metadata?.userEmail) {
         userEmail = args.metadata.userEmail;
       } else {
-        console.log("User email not found in metadata, trying to fetch from userId:", args.userId);
         // Since we're now using an internalAction, we can't use ctx.auth.getUserIdentity()
         // We would need to get the user email from a different source, like the database
         console.error("User email not provided in metadata for userId:", args.userId);
@@ -33,7 +32,6 @@ export const sendNotificationEmail = internalAction({
       }
 
       // Initialize Resend with API key
-      console.log("Resend API Key:", process.env.CONVEX_RESEND_API_KEY, "User Email:", userEmail);
       const resend = new Resend(process.env.CONVEX_RESEND_API_KEY);
 
       // Format the email based on notification type
@@ -70,7 +68,6 @@ export const sendNotificationEmail = internalAction({
         html: emailHtml
       });
 
-      console.log("Email sent successfully:", data, error);
 
       // Mark notification as email sent
       //@ts-ignore

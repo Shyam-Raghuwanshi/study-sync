@@ -39,7 +39,6 @@ const ProblemGenerator = ({ sessionId, userId }) => {
         count: count,
       });
 
-      console.log('Generated problems:', problems);
       setGeneratedProblems(problems);
       toast.success('Problems generated successfully');
     } catch (error) {
