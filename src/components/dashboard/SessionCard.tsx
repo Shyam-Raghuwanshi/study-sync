@@ -191,12 +191,12 @@ const SessionCard = ({
                 >
                   Join Now
                 </Button>
-              ) : <Button
+              ) : isAdmin ? <Button
                 size="sm"
                 onClick={handleJoinSession}
               >
                 View Session
-              </Button>}
+              </Button> : <></>}
 
               {status === 'upcoming' && shouldShowNotifyButton && (
                 <Button

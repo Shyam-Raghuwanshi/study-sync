@@ -131,9 +131,9 @@ export const joinSession = mutation({
         }
 
         // Check if the session's start time has passed for upcoming sessions
-        if (session.status === 'upcoming' && session.startTime > Date.now()) {
-            throw new Error("This session hasn't started yet");
-        }
+        // if (session.status === 'upcoming' && session.startTime > Date.now()) {
+        //     throw new Error("This session hasn't started yet");
+        // }
 
         // Check if user is already a participant
         if (session.participants.includes(args.userId)) {
