@@ -627,15 +627,15 @@ const SessionRoom = () => {
           )}>
 
             <div className="p-4">
-              <Tabs defaultValue="participants">
+              <Tabs defaultValue="resources">
                 <TabsList className="grid grid-cols-2 mb-4">
-                  <TabsTrigger value="participants">
-                    <Users className="h-4 w-4 mr-2" />
-                    Participants
-                  </TabsTrigger>
                   <TabsTrigger value="resources">
                     <BookOpen className="h-4 w-4 mr-2" />
                     Resources
+                  </TabsTrigger>
+                  <TabsTrigger value="participants">
+                    <Users className="h-4 w-4 mr-2" />
+                    Participants
                   </TabsTrigger>
                 </TabsList>
 
