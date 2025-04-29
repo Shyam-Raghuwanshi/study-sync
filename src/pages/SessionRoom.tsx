@@ -69,7 +69,7 @@ const SessionRoom = () => {
   const { id, groupId } = useParams<{ id: string, groupId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('chat');
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [message, setMessage] = useState('');
   const { userId } = useAuth();
   const { user } = useUser();
